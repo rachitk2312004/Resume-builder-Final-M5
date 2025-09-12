@@ -1,0 +1,925 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useAutoSave } from '../contexts/AutoSaveContext';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import { 
+  Save, 
+  Eye, 
+  Download, 
+  Share2, 
+  ArrowLeft, 
+  Settings, 
+  Palette, 
+  Upload,
+  Plus,
+  Trash2,
+  Edit3,
+  Globe,
+  BarChart3,
+  MessageSquare,
+  FileText,
+  User,
+  Briefcase,
+  Code,
+  Award
+} from 'lucide-react';
+import { portfolioAPI, portfolioTemplateAPI, resumeAPI } from '../services/api';
+import { PORTFOLIO_TEMPLATE_REGISTRY, getPortfolioTemplateById } from '../components/templates/PortfolioTemplateRegistry';
+import toast from 'react-hot-toast';
+
+const PortfolioBuilderPage = () => {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const { savePortfolio, isSaving } = useAutoSave();
+  const navigate = useNavigate();
+  const [portfolio, setPortfolio] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('content');
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showResumeImport, setShowResumeImport] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [resumes, setResumes] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    slug: '',
+    templateId: 'modern',
+    jsonContent: '',
+    status: 'IN_PROGRESS',
+    isPublic: false,
+    seoTitle: '',
+    seoDescription: '',
+    seoImageUrl: ''
+  });
+  const [portfolioData, setPortfolioData] = useState({
+    name: '',
+    title: '',
+    about: '',
+    email: '',
+    phone: '',
+    location: '',
+    website: '',
+    github: '',
+    linkedin: '',
+    experience: [],
+    projects: [],
+    skills: [],
+    education: [],
+    certifications: []
+  });
+
+  useEffect(() => {
+    if (id) {
+      fetchPortfolio();
+    } else {
+      setIsLoading(false);
+    }
+    fetchTemplates();
+    fetchResumes();
+  }, [id]);
+
+  useEffect(() => {
+    if (portfolio) {
+      setFormData({
+        title: portfolio.title || '',
+        slug: portfolio.slug || '',
+        templateId: portfolio.templateId || 'modern',
+        jsonContent: portfolio.jsonContent || '',
+        status: portfolio.status || 'IN_PROGRESS',
+        isPublic: portfolio.isPublic || false,
+        seoTitle: portfolio.seoTitle || '',
+        seoDescription: portfolio.seoDescription || '',
+        seoImageUrl: portfolio.seoImageUrl || ''
+      });
+      
+      // Parse portfolio data
+      try {
+        const data = portfolio.jsonContent ? JSON.parse(portfolio.jsonContent) : {};
+        setPortfolioData({
+          name: data.name || '',
+          title: data.title || '',
+          about: data.about || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          location: data.location || '',
+          website: data.website || '',
+          github: data.github || '',
+          linkedin: data.linkedin || '',
+          experience: data.experience || [],
+          projects: data.projects || [],
+          skills: data.skills || [],
+          education: data.education || [],
+          certifications: data.certifications || []
+        });
+      } catch (error) {
+        console.error('Error parsing portfolio data:', error);
+      }
+    }
+  }, [portfolio]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (id && formData.jsonContent) {
+      const timeoutId = setTimeout(() => {
+        savePortfolio(id, formData);
+      }, 2000); // Auto-save after 2 seconds of inactivity
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, id, savePortfolio]);
+
+  // Update JSON content when portfolio data changes
+  useEffect(() => {
+    const jsonContent = JSON.stringify(portfolioData, null, 2);
+    setFormData(prev => ({ ...prev, jsonContent }));
+  }, [portfolioData]);
+
+  const fetchPortfolio = async () => {
+    try {
+      const response = await portfolioAPI.getPortfolio(id);
+      setPortfolio(response.data);
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+      toast.error('Failed to load portfolio');
+      navigate('/dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await portfolioTemplateAPI.getTemplates();
+      setTemplates(response.data);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    }
+  };
+
+  const fetchResumes = async () => {
+    try {
+      const response = await resumeAPI.getResumes();
+      setResumes(response.data);
+    } catch (error) {
+      console.error('Error fetching resumes:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handlePortfolioDataChange = (field, value) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleTemplateChange = (templateId) => {
+    setFormData(prev => ({ ...prev, templateId }));
+    setShowTemplateSelector(false);
+    toast.success('Template updated successfully');
+  };
+
+  const handleResumeImport = async (resumeId) => {
+    try {
+      const response = await portfolioAPI.createFromResume({
+        resumeId,
+        title: formData.title || 'Portfolio from Resume',
+        templateId: formData.templateId
+      });
+      
+      navigate(`/portfolio-builder/${response.data.id}`);
+      toast.success('Portfolio created from resume successfully');
+    } catch (error) {
+      console.error('Error importing resume:', error);
+      toast.error('Failed to import resume');
+    }
+  };
+
+  const handlePublish = async () => {
+    try {
+      await portfolioAPI.publish(id);
+      setFormData(prev => ({ ...prev, isPublic: true, status: 'COMPLETED' }));
+      toast.success('Portfolio published successfully');
+    } catch (error) {
+      console.error('Error publishing portfolio:', error);
+      toast.error('Failed to publish portfolio');
+    }
+  };
+
+  const handleUnpublish = async () => {
+    try {
+      await portfolioAPI.unpublish(id);
+      setFormData(prev => ({ ...prev, isPublic: false }));
+      toast.success('Portfolio unpublished successfully');
+    } catch (error) {
+      console.error('Error unpublishing portfolio:', error);
+      toast.error('Failed to unpublish portfolio');
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      if (id) {
+        await portfolioAPI.updatePortfolio(id, formData);
+        toast.success('Portfolio saved successfully');
+      } else {
+        const response = await portfolioAPI.createPortfolio(formData);
+        navigate(`/portfolio-builder/${response.data.id}`);
+        toast.success('Portfolio created successfully');
+      }
+    } catch (error) {
+      console.error('Error saving portfolio:', error);
+      toast.error('Failed to save portfolio');
+    }
+  };
+
+  const handlePreview = () => {
+    // Open preview in new tab
+    window.open(`/portfolio/${portfolio?.publicLink || 'preview'}`, '_blank');
+  };
+
+  const handleDownload = () => {
+    // Implement PDF download functionality
+    toast.success('Download feature coming soon!');
+  };
+
+  const handleShare = () => {
+    if (portfolio?.publicLink) {
+      navigator.clipboard.writeText(`${window.location.origin}/portfolio/${portfolio.publicLink}`);
+      toast.success('Share link copied to clipboard');
+    } else {
+      toast.error('Please make the portfolio public first');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const TemplateComponent = getPortfolioTemplateById(formData.templateId).component;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Portfolio Builder</h1>
+              <p className="text-gray-600">
+                {isSaving ? 'Auto-saving...' : 'Build your professional portfolio'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowTemplateSelector(true)}
+              className="btn-secondary"
+            >
+              <Palette className="w-4 h-4 mr-2" />
+              Templates
+            </button>
+            <button
+              onClick={() => setShowResumeImport(true)}
+              className="btn-secondary"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Import Resume
+            </button>
+            <button
+              onClick={() => setShowChat(true)}
+              className="btn-secondary"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              AI Chat
+            </button>
+            <button
+              onClick={handleSave}
+              className="btn-secondary"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </button>
+            {formData.isPublic ? (
+              <button
+                onClick={handleUnpublish}
+                className="btn-secondary"
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Unpublish
+              </button>
+            ) : (
+              <button
+                onClick={handlePublish}
+                className="btn-primary"
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Publish
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="card mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Navigation</h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setActiveTab('content')}
+                  className={`w-full text-left px-3 py-2 rounded-lg ${
+                    activeTab === 'content' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <User className="w-4 h-4 inline mr-2" />
+                  Content
+                </button>
+                <button
+                  onClick={() => setActiveTab('experience')}
+                  className={`w-full text-left px-3 py-2 rounded-lg ${
+                    activeTab === 'experience' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Briefcase className="w-4 h-4 inline mr-2" />
+                  Experience
+                </button>
+                <button
+                  onClick={() => setActiveTab('projects')}
+                  className={`w-full text-left px-3 py-2 rounded-lg ${
+                    activeTab === 'projects' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Code className="w-4 h-4 inline mr-2" />
+                  Projects
+                </button>
+                <button
+                  onClick={() => setActiveTab('skills')}
+                  className={`w-full text-left px-3 py-2 rounded-lg ${
+                    activeTab === 'skills' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Award className="w-4 h-4 inline mr-2" />
+                  Skills
+                </button>
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`w-full text-left px-3 py-2 rounded-lg ${
+                    activeTab === 'settings' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Settings className="w-4 h-4 inline mr-2" />
+                  Settings
+                </button>
+              </div>
+            </div>
+
+            {/* Analytics */}
+            {portfolio && (
+              <div className="card">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Analytics
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Views</span>
+                    <span className="font-semibold">{portfolio.viewsCount || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Status</span>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      formData.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {formData.isPublic ? 'Public' : 'Private'}
+                    </span>
+                  </div>
+                  {formData.isPublic && (
+                    <div className="pt-3 border-t">
+                      <a
+                        href={`/portfolio/${portfolio.slug || portfolio.publicLink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View Live Portfolio
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            {activeTab === 'content' && (
+              <div className="card">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Portfolio Content</h2>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Portfolio Title
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      className="input-field"
+                      placeholder="Enter portfolio title"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
+                      value={portfolioData.name}
+                      onChange={(e) => handlePortfolioDataChange('name', e.target.value)}
+                      className="input-field"
+                      placeholder="Enter your name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Professional Title
+                    </label>
+                    <input
+                      type="text"
+                      value={portfolioData.title}
+                      onChange={(e) => handlePortfolioDataChange('title', e.target.value)}
+                      className="input-field"
+                      placeholder="e.g., Software Engineer, Designer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      About You
+                    </label>
+                    <textarea
+                      value={portfolioData.about}
+                      onChange={(e) => handlePortfolioDataChange('about', e.target.value)}
+                      rows={4}
+                      className="input-field"
+                      placeholder="Tell us about yourself..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={portfolioData.email}
+                        onChange={(e) => handlePortfolioDataChange('email', e.target.value)}
+                        className="input-field"
+                        placeholder="your@email.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={portfolioData.phone}
+                        onChange={(e) => handlePortfolioDataChange('phone', e.target.value)}
+                        className="input-field"
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={portfolioData.location}
+                      onChange={(e) => handlePortfolioDataChange('location', e.target.value)}
+                      className="input-field"
+                      placeholder="City, State, Country"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Website
+                      </label>
+                      <input
+                        type="url"
+                        value={portfolioData.website}
+                        onChange={(e) => handlePortfolioDataChange('website', e.target.value)}
+                        className="input-field"
+                        placeholder="https://yourwebsite.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        GitHub
+                      </label>
+                      <input
+                        type="url"
+                        value={portfolioData.github}
+                        onChange={(e) => handlePortfolioDataChange('github', e.target.value)}
+                        className="input-field"
+                        placeholder="https://github.com/username"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        LinkedIn
+                      </label>
+                      <input
+                        type="url"
+                        value={portfolioData.linkedin}
+                        onChange={(e) => handlePortfolioDataChange('linkedin', e.target.value)}
+                        className="input-field"
+                        placeholder="https://linkedin.com/in/username"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'experience' && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900">Experience</h2>
+                  <button className="btn-primary">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Experience
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {portfolioData.experience.map((exp, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900">{exp.title || exp.position}</h3>
+                        <button className="text-red-600 hover:text-red-800">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-gray-600 mb-2">{exp.company || exp.organization}</p>
+                      <p className="text-sm text-gray-500">{exp.period || `${exp.startDate} - ${exp.endDate}`}</p>
+                    </div>
+                  ))}
+                  
+                  {portfolioData.experience.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Briefcase className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No experience added yet</p>
+                      <p className="text-sm">Click "Add Experience" to get started</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'projects' && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900">Projects</h2>
+                  <button className="btn-primary">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Project
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {portfolioData.projects.map((project, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900">{project.name || project.title}</h3>
+                        <button className="text-red-600 hover:text-red-800">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-gray-600 mb-2">{project.description}</p>
+                      {project.technologies && (
+                        <div className="flex flex-wrap gap-2">
+                          {project.technologies.map((tech, techIndex) => (
+                            <span key={techIndex} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                              {tech}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {portfolioData.projects.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Code className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No projects added yet</p>
+                      <p className="text-sm">Click "Add Project" to get started</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'skills' && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900">Skills</h2>
+                  <button className="btn-primary">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Skill
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {portfolioData.skills.map((skill, index) => (
+                    <div key={index} className="flex items-center justify-between border border-gray-200 rounded-lg p-4">
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-900">{skill.name || skill}</span>
+                        {skill.level && (
+                          <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-blue-500 h-2 rounded-full"
+                              style={{ width: `${skill.level}%` }}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                      <button className="text-red-600 hover:text-red-800 ml-4">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {portfolioData.skills.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Award className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No skills added yet</p>
+                      <p className="text-sm">Click "Add Skill" to get started</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="card">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Portfolio Settings</h2>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Custom URL Slug
+                    </label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                        yoursite.com/u/
+                      </span>
+                      <input
+                        type="text"
+                        value={formData.slug}
+                        onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                        className="flex-1 input-field rounded-l-none"
+                        placeholder="your-custom-slug"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SEO Title
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.seoTitle}
+                      onChange={(e) => setFormData(prev => ({ ...prev, seoTitle: e.target.value }))}
+                      className="input-field"
+                      placeholder="SEO optimized title"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SEO Description
+                    </label>
+                    <textarea
+                      value={formData.seoDescription}
+                      onChange={(e) => setFormData(prev => ({ ...prev, seoDescription: e.target.value }))}
+                      rows={3}
+                      className="input-field"
+                      placeholder="SEO description for search engines"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SEO Image URL
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.seoImageUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, seoImageUrl: e.target.value }))}
+                      className="input-field"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isPublic}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isPublic: e.target.checked }))}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label className="ml-2 text-sm text-gray-700">
+                        Make this portfolio public
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Preview */}
+          <div className="lg:col-span-1">
+            <div className="card sticky top-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Preview</h3>
+              
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="h-96 overflow-y-auto">
+                  <TemplateComponent data={portfolioData} isPreview={true} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Template Selector Modal */}
+      {showTemplateSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Choose a Template</h3>
+              <button
+                onClick={() => setShowTemplateSelector(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.values(PORTFOLIO_TEMPLATE_REGISTRY).map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() => handleTemplateChange(template.id)}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
+                    formData.templateId === template.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <h4 className="font-semibold text-gray-900 mb-2">{template.name}</h4>
+                  <p className="text-sm text-gray-600 mb-2">{template.description}</p>
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    {template.category}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resume Import Modal */}
+      {showResumeImport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Import from Resume</h3>
+              <button
+                onClick={() => setShowResumeImport(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className="text-gray-600">Select a resume to import data from:</p>
+              
+              {resumes.map((resume) => (
+                <div
+                  key={resume.id}
+                  onClick={() => handleResumeImport(resume.id)}
+                  className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-gray-300 transition-colors"
+                >
+                  <h4 className="font-semibold text-gray-900">{resume.title}</h4>
+                  <p className="text-sm text-gray-600">Status: {resume.status}</p>
+                </div>
+              ))}
+              
+              {resumes.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No resumes found</p>
+                  <p className="text-sm">Create a resume first to import data</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Modal */}
+      {showChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">AI Assistant</h3>
+              <button
+                onClick={() => setShowChat(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className="text-gray-600">Ask me to help you with your portfolio:</p>
+              
+              <div className="space-y-2">
+                <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                  "Add a new project with React and Node.js"
+                </button>
+                <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                  "Improve my about section"
+                </button>
+                <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                  "Suggest skills for a frontend developer"
+                </button>
+                <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                  "Change theme to dark mode"
+                </button>
+              </div>
+              
+              <div className="mt-6">
+                <textarea
+                  placeholder="Type your request here..."
+                  className="w-full p-3 border border-gray-200 rounded-lg"
+                  rows={3}
+                />
+                <button className="mt-2 btn-primary">
+                  Send Message
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </div>
+  );
+};
+
+export default PortfolioBuilderPage;
