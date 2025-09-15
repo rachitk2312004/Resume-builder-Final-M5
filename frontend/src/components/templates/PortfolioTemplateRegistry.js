@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Import all portfolio templates
+// Import portfolio templates with unique designs
 import ModernTemplate from './ModernTemplate';
 import MinimalTemplate from './MinimalTemplate';
 import CreativeTemplate from './CreativeTemplate';
@@ -9,10 +9,6 @@ import CorporateTemplate from './CorporateTemplate';
 import StartupTemplate from './StartupTemplate';
 import FreelancerTemplate from './FreelancerTemplate';
 import AcademicTemplate from './AcademicTemplate';
-import PhotographerTemplate from './PhotographerTemplate';
-import WriterTemplate from './WriterTemplate';
-import ConsultantTemplate from './ConsultantTemplate';
-import ArtistTemplate from './ArtistTemplate';
 
 export const PORTFOLIO_TEMPLATE_REGISTRY = {
   modern: {
@@ -42,7 +38,7 @@ export const PORTFOLIO_TEMPLATE_REGISTRY = {
   developer: {
     id: 'developer',
     name: 'Developer Focus',
-    description: 'Tech-focused layout with code snippets',
+    description: 'Tech-focused layout with code snippets and dark theme',
     category: 'tech',
     component: DeveloperTemplate,
     preview: '/templates/developer-preview.jpg'
@@ -50,23 +46,23 @@ export const PORTFOLIO_TEMPLATE_REGISTRY = {
   corporate: {
     id: 'corporate',
     name: 'Corporate Executive',
-    description: 'Professional corporate style',
-    category: 'corporate',
+    description: 'Professional corporate style with formal layout',
+    category: 'business',
     component: CorporateTemplate,
     preview: '/templates/corporate-preview.jpg'
   },
   startup: {
     id: 'startup',
     name: 'Startup Founder',
-    description: 'Dynamic layout for entrepreneurs',
+    description: 'Dynamic layout for entrepreneurs with vibrant colors',
     category: 'startup',
     component: StartupTemplate,
     preview: '/templates/startup-preview.jpg'
   },
   freelancer: {
     id: 'freelancer',
-    name: 'Freelancer',
-    description: 'Flexible layout for freelancers',
+    name: 'Freelancer Portfolio',
+    description: 'Flexible layout for freelancers with project showcase',
     category: 'freelance',
     component: FreelancerTemplate,
     preview: '/templates/freelancer-preview.jpg'
@@ -74,42 +70,10 @@ export const PORTFOLIO_TEMPLATE_REGISTRY = {
   academic: {
     id: 'academic',
     name: 'Academic Researcher',
-    description: 'Academic and research focused',
+    description: 'Scholarly layout for academics and researchers',
     category: 'academic',
     component: AcademicTemplate,
     preview: '/templates/academic-preview.jpg'
-  },
-  photographer: {
-    id: 'photographer',
-    name: 'Photography Portfolio',
-    description: 'Image-heavy layout for photographers',
-    category: 'creative',
-    component: PhotographerTemplate,
-    preview: '/templates/photographer-preview.jpg'
-  },
-  writer: {
-    id: 'writer',
-    name: 'Writer & Blogger',
-    description: 'Content-focused layout for writers',
-    category: 'content',
-    component: WriterTemplate,
-    preview: '/templates/writer-preview.jpg'
-  },
-  consultant: {
-    id: 'consultant',
-    name: 'Business Consultant',
-    description: 'Professional consulting layout',
-    category: 'corporate',
-    component: ConsultantTemplate,
-    preview: '/templates/consultant-preview.jpg'
-  },
-  artist: {
-    id: 'artist',
-    name: 'Digital Artist',
-    description: 'Creative layout for digital artists',
-    category: 'creative',
-    component: ArtistTemplate,
-    preview: '/templates/artist-preview.jpg'
   }
 };
 

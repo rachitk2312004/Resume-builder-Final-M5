@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAutoSave } from '../contexts/AutoSaveContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import Modal from '../components/Modal';
 import { 
   Save, 
   Eye, 
@@ -23,7 +24,9 @@ import {
   User,
   Briefcase,
   Code,
-  Award
+  Award,
+  ExternalLink,
+  GripVertical
 } from 'lucide-react';
 import { portfolioAPI, portfolioTemplateAPI, resumeAPI } from '../services/api';
 import { PORTFOLIO_TEMPLATE_REGISTRY, getPortfolioTemplateById } from '../components/templates/PortfolioTemplateRegistry';
@@ -40,8 +43,12 @@ const PortfolioBuilderPage = () => {
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showResumeImport, setShowResumeImport] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [resumes, setResumes] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [showAddSection, setShowAddSection] = useState(false);
+  const [newSectionName, setNewSectionName] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -173,6 +180,14 @@ const PortfolioBuilderPage = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Auto-save when form data changes
+    if (id) {
+      const updatedFormData = {
+        ...formData,
+        [name]: type === 'checkbox' ? checked : value
+      };
+      savePortfolio(id, updatedFormData);
+    }
   };
 
   const handlePortfolioDataChange = (field, value) => {
@@ -180,6 +195,15 @@ const PortfolioBuilderPage = () => {
       ...prev,
       [field]: value
     }));
+    // Auto-save when portfolio data changes
+    if (id) {
+      const updatedData = { ...portfolioData, [field]: value };
+      const updatedFormData = {
+        ...formData,
+        jsonContent: JSON.stringify(updatedData)
+      };
+      savePortfolio(id, updatedFormData);
+    }
   };
 
   const handleTemplateChange = (templateId) => {
@@ -243,8 +267,8 @@ const PortfolioBuilderPage = () => {
   };
 
   const handlePreview = () => {
-    // Open preview in new tab
-    window.open(`/portfolio/${portfolio?.publicLink || 'preview'}`, '_blank');
+    // Open preview in modal
+    setIsPreviewOpen(true);
   };
 
   const handleDownload = () => {
@@ -259,6 +283,62 @@ const PortfolioBuilderPage = () => {
     } else {
       toast.error('Please make the portfolio public first');
     }
+  };
+
+  const addSection = (sectionType) => {
+    const newSection = {
+      id: Date.now().toString(),
+      type: sectionType,
+      title: sectionType.charAt(0).toUpperCase() + sectionType.slice(1),
+      items: [],
+      isFixed: sectionType === 'personal'
+    };
+    
+    setSections(prev => [...prev, newSection]);
+    
+    // Update portfolio data
+    const updatedData = { ...portfolioData };
+    if (!updatedData[sectionType]) {
+      updatedData[sectionType] = [];
+    }
+    setPortfolioData(updatedData);
+    
+    // Auto-save
+    if (id) {
+      const updatedFormData = {
+        ...formData,
+        jsonContent: JSON.stringify(updatedData)
+      };
+      savePortfolio(id, updatedFormData);
+    }
+    
+    toast.success(`${sectionType} section added successfully`);
+  };
+
+  const addCustomSection = () => {
+    if (!newSectionName.trim()) {
+      toast.error('Please enter a section name');
+      return;
+    }
+    
+    const newSection = {
+      id: Date.now().toString(),
+      type: 'custom',
+      title: newSectionName.trim(),
+      items: [],
+      isFixed: false
+    };
+    
+    setSections(prev => [...prev, newSection]);
+    setNewSectionName('');
+    setShowAddSection(false);
+    
+    toast.success('Custom section added successfully');
+  };
+
+  const removeSection = (sectionId) => {
+    setSections(prev => prev.filter(section => section.id !== sectionId));
+    toast.success('Section removed successfully');
   };
 
   if (isLoading) {
@@ -279,7 +359,7 @@ const PortfolioBuilderPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -326,6 +406,13 @@ const PortfolioBuilderPage = () => {
               <Save className="w-4 h-4 mr-2" />
               Save
             </button>
+            <button
+              onClick={handlePreview}
+              className="btn-secondary"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
+            </button>
             {formData.isPublic ? (
               <button
                 onClick={handleUnpublish}
@@ -346,7 +433,7 @@ const PortfolioBuilderPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="card mb-6">
@@ -387,6 +474,15 @@ const PortfolioBuilderPage = () => {
                 >
                   <Award className="w-4 h-4 inline mr-2" />
                   Skills
+                </button>
+                
+                {/* Add Section Button */}
+                <button
+                  onClick={() => setShowAddSection(true)}
+                  className="w-full text-left px-3 py-2 rounded-lg text-blue-600 hover:bg-blue-50 border border-blue-200 border-dashed"
+                >
+                  <Plus className="w-4 h-4 inline mr-2" />
+                  Add Section
                 </button>
                 <button
                   onClick={() => setActiveTab('settings')}
@@ -438,8 +534,11 @@ const PortfolioBuilderPage = () => {
             )}
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2">
+          {/* Main Content and Preview Container */}
+          <div className="lg:col-span-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* Content Section */}
+              <div>
             {activeTab === 'content' && (
               <div className="card">
                 <h2 className="text-lg font-semibold text-gray-900 mb-6">Portfolio Content</h2>
@@ -583,7 +682,10 @@ const PortfolioBuilderPage = () => {
               <div className="card">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">Experience</h2>
-                  <button className="btn-primary">
+                  <button 
+                    onClick={() => addSection('experience')}
+                    className="btn-primary"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Experience
                   </button>
@@ -618,7 +720,10 @@ const PortfolioBuilderPage = () => {
               <div className="card">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">Projects</h2>
-                  <button className="btn-primary">
+                  <button 
+                    onClick={() => addSection('projects')}
+                    className="btn-primary"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Project
                   </button>
@@ -661,7 +766,10 @@ const PortfolioBuilderPage = () => {
               <div className="card">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">Skills</h2>
-                  <button className="btn-primary">
+                  <button 
+                    onClick={() => addSection('skills')}
+                    className="btn-primary"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Skill
                   </button>
@@ -776,17 +884,28 @@ const PortfolioBuilderPage = () => {
                 </div>
               </div>
             )}
-          </div>
+              </div>
 
-          {/* Preview */}
-          <div className="lg:col-span-1">
-            <div className="card sticky top-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Preview</h3>
+              {/* Preview Section */}
+              <div>
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Preview</h3>
+                <button 
+                  onClick={handlePreview}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  Full Preview
+                </button>
+              </div>
               
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="h-96 overflow-y-auto">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-[500px]">
+                <div className="transform scale-90 origin-top-left w-[111%] h-[111%] overflow-hidden">
                   <TemplateComponent data={portfolioData} isPreview={true} />
                 </div>
+              </div>
+            </div>
               </div>
             </div>
           </div>
@@ -916,6 +1035,56 @@ const PortfolioBuilderPage = () => {
           </div>
         </div>
       )}
+
+      {/* Add Section Modal */}
+      <Modal
+        open={showAddSection}
+        onClose={() => setShowAddSection(false)}
+        title="Add New Section"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Section Name
+            </label>
+            <input
+              type="text"
+              value={newSectionName}
+              onChange={(e) => setNewSectionName(e.target.value)}
+              className="input-field"
+              placeholder="Enter section name (e.g., Education, Certifications)"
+            />
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowAddSection(false)}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={addCustomSection}
+              className="btn-primary"
+            >
+              Add Section
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Preview Modal */}
+      <Modal
+        open={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        title="Portfolio Preview"
+        fullscreen
+      >
+        <div className="h-[calc(100vh-120px)] overflow-y-auto">
+          <div className="w-full h-full min-h-[800px]">
+            <TemplateComponent data={portfolioData} isPreview={true} />
+          </div>
+        </div>
+      </Modal>
 
       <Footer />
     </div>
