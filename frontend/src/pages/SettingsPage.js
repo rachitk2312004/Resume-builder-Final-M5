@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAutoSave } from '../contexts/AutoSaveContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { User, Lock, Bell, Shield, Save } from 'lucide-react';
+import { User, Lock, Bell, Shield, Save, FileText } from 'lucide-react';
 import { userAPI } from '../services/api';
+import SettingsPanel from '../components/SettingsPanel';
 import toast from 'react-hot-toast';
 
 const SettingsPage = () => {
   const { user, updateUser } = useAuth();
   const { autoSaveEnabled, toggleAutoSave } = useAutoSave();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
@@ -308,43 +311,38 @@ const SettingsPage = () => {
             )}
 
             {activeTab === 'privacy' && (
-              <div className="card">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Privacy Settings</h2>
-                
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Data Collection</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      We collect minimal data to provide our services. Your resume and portfolio content 
-                      is stored securely and only accessible to you unless you choose to make it public.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Data Usage</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Your data is used solely to provide and improve our resume and portfolio building services. 
-                      We do not sell or share your personal information with third parties.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Data Security</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      All data is encrypted in transit and at rest. We use industry-standard security 
-                      measures to protect your information.
-                    </p>
-                  </div>
-
-                  <div className="border-t pt-6">
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Account Deletion</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      You can delete your account at any time. This will permanently remove all your 
-                      data from our servers.
-                    </p>
-                    <button className="btn-danger">
-                      Delete Account
+              <div className="space-y-4">
+                <SettingsPanel />
+                <div className="card">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">AI Usage & Logs</h2>
+                    <button
+                      onClick={() => navigate('/settings/logs')}
+                      className="btn-secondary flex items-center space-x-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>View Logs</span>
                     </button>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    View and export your AI usage logs and ATS history. Track your monthly AI calls and monitor your resume optimization progress.
+                  </p>
+                </div>
+                <div className="card">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-6">Privacy Details</h2>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">Data Collection</h3>
+                      <p className="text-sm text-gray-600 mb-4">We collect minimal data to provide our services. Your resume and portfolio content is stored securely and only accessible to you unless you choose to make it public.</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">Data Usage</h3>
+                      <p className="text-sm text-gray-600 mb-4">Your data is used solely to provide and improve our resume and portfolio building services. We do not sell or share your personal information with third parties.</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">Data Security</h3>
+                      <p className="text-sm text-gray-600 mb-4">All data is encrypted in transit and at rest. We use industry-standard security measures to protect your information.</p>
+                    </div>
                   </div>
                 </div>
               </div>

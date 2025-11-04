@@ -139,6 +139,34 @@ INSERT INTO portfolios (user_id, title, slug, template_id, status, json_content,
 (1, 'Developer Portfolio', 'john-doe-developer', 'developer', 'COMPLETED', '{"name": "John Doe", "title": "Full Stack Developer", "projects": []}', true, 'john-doe-developer-portfolio', 150),
 (2, 'Design Portfolio', 'jane-smith-design', 'creative', 'COMPLETED', '{"name": "Jane Smith", "title": "UX/UI Designer", "projects": []}', true, 'jane-smith-design-portfolio', 89);
 
+-- AI Module tables
+CREATE TABLE IF NOT EXISTS ai_logs (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    endpoint VARCHAR(255) NOT NULL,
+    tokens_used INTEGER,
+    model VARCHAR(100),
+    success BOOLEAN NOT NULL DEFAULT TRUE,
+    notes VARCHAR(2000),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ats_scores (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    resume_id BIGINT NOT NULL,
+    score INTEGER NOT NULL,
+    keywords TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS job_analysis_cache (
+    id SERIAL PRIMARY KEY,
+    job_id VARCHAR(255) UNIQUE NOT NULL,
+    parsed_data TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 -- Grant permissions (adjust as needed for your setup)
 -- GRANT ALL PRIVILEGES ON DATABASE resume_builder TO your_app_user;
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO your_app_user;

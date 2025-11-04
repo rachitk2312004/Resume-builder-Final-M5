@@ -36,6 +36,9 @@ public class User {
     
     @Column(name = "is_public_by_default", nullable = false)
     private Boolean isPublicByDefault = false;
+
+    @Column(name = "allow_external_ai")
+    private Boolean allowExternalAi = true;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -99,6 +102,14 @@ public class User {
     
     public void setIsPublicByDefault(Boolean isPublicByDefault) {
         this.isPublicByDefault = isPublicByDefault;
+    }
+
+    public Boolean getAllowExternalAi() {
+        return allowExternalAi;
+    }
+
+    public void setAllowExternalAi(Boolean allowExternalAi) {
+        this.allowExternalAi = allowExternalAi;
     }
     
     public LocalDateTime getCreatedAt() {

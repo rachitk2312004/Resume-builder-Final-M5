@@ -62,6 +62,40 @@ public class UserController {
             return ResponseEntity.badRequest().body(error);
         }
     }
+
+    @GetMapping("/settings/ai")
+    public ResponseEntity<?> getAiSettings(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            Map<String, Object> res = new HashMap<>();
+            res.put("allowExternalAi", user.getAllowExternalAi());
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @PutMapping("/settings/ai")
+    public ResponseEntity<?> updateAiSettings(@RequestBody Map<String, Object> updates, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            Boolean allowExternalAi = (Boolean) updates.get("allowExternalAi");
+            User updated = userService.updateAllowExternalAi(user.getId(), allowExternalAi);
+            Map<String, Object> res = new HashMap<>();
+            res.put("allowExternalAi", updated.getAllowExternalAi());
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
     
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request, 

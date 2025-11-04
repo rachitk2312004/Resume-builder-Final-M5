@@ -119,6 +119,11 @@ export const aiAPI = {
   summary: (payload) => api.post('/ai/summary', payload),
   skills: (payload) => api.post('/ai/skills', payload),
   atsOptimize: (payload) => api.post('/ai/ats-optimize', payload),
+  generateSummary: (payload) => api.post('/ai/generate-summary', payload),
+  rewriteBullets: (payload) => api.post('/ai/rewrite-bullets', payload),
+  suggestSkills: (payload) => api.post('/ai/suggest-skills', payload),
+  atsScore: (payload) => api.post('/ai/ats-score', payload),
+  parseJob: (text) => api.post('/ai/parse-job', { text }),
 };
 
 // Export API
@@ -134,6 +139,29 @@ export const ocrAPI = {
     form.append('file', file);
     return api.post('/ocr/parse-jd', form, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
+  upload: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post('/ocr/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+};
+
+// Settings API
+export const settingsAPI = {
+  getAi: () => api.get('/user/settings/ai'),
+  setAi: (allowExternalAi) => api.put('/user/settings/ai', { allowExternalAi }),
+};
+
+// AI Logs API
+export const aiLogsAPI = {
+  getLogs: (page = 0, size = 20) => api.get(`/ai/logs?page=${page}&size=${size}`),
+  exportLogs: () => api.get('/ai/logs/export', { responseType: 'blob' }),
+};
+
+// ATS History API
+export const atsHistoryAPI = {
+  getHistory: (page = 0, size = 20) => api.get(`/ats/history?page=${page}&size=${size}`),
+  exportHistory: () => api.get('/ats/history/export', { responseType: 'blob' }),
 };
 
 export default api;

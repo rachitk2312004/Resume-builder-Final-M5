@@ -9,6 +9,8 @@ import { resumeAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import SectionManager from '../components/SectionManager';
 import AIBar from '../components/AIBar';
+import JobUpload from '../components/JobUpload';
+import AIFeaturesPanel from '../components/AIFeaturesPanel';
 import { templates, getDefaultData } from '../components/templates/TemplateRegistry';
 import { exportAPI } from '../services/api';
 import { saveAs } from 'file-saver';
@@ -334,6 +336,35 @@ const ResumeBuilderPage = () => {
                 }
               }}
             />
+
+            <div className="mt-4 space-y-4">
+              <JobUpload onParsed={(res) => {
+                const text = res.parsedText;
+                const sections = [{ id: 'job', title: 'Job Description', items: [text] }, ...formData.data.sections];
+                setFormData(prev => ({ ...prev, data: { ...prev.data, sections } }));
+              }} />
+              <AIFeaturesPanel
+                resumeText={JSON.stringify(formData.data)}
+                jobText={(formData.data.sections.find(s => (s.title||'').toLowerCase()==='job description')?.items?.[0]) || ''}
+                bullets={(formData.data.sections.find(s => (s.title||'').toLowerCase()==='experience')?.items) || []}
+                onAcceptSummary={(text) => {
+                  const exists = formData.data.sections.find(s => s.title.toLowerCase() === 'summary');
+                  const sections = exists ? formData.data.sections.map(s => s.title.toLowerCase() === 'summary' ? { ...s, items: [text] } : s)
+                                          : [{ id: 'summary', title: 'Summary', items: [text] }, ...formData.data.sections];
+                  setFormData(prev => ({ ...prev, data: { ...prev.data, sections } }));
+                }}
+                onAcceptBullets={(index, text) => {
+                  const sections = formData.data.sections.map(s => (s.title||'').toLowerCase() === 'experience' ? { ...s, items: s.items.map((b, i) => i===index ? text : b) } : s);
+                  setFormData(prev => ({ ...prev, data: { ...prev.data, sections } }));
+                }}
+                onAddSkills={(arr) => {
+                  const exists = formData.data.sections.find(s => (s.title||'').toLowerCase() === 'skills');
+                  const sections = exists ? formData.data.sections.map(s => (s.title||'').toLowerCase() === 'skills' ? { ...s, items: [...(s.items||[]), ...arr] } : s)
+                                          : [{ id: 'skills', title: 'Skills', items: arr }, ...formData.data.sections];
+                  setFormData(prev => ({ ...prev, data: { ...prev.data, sections } }));
+                }}
+              />
+            </div>
           </div>
 
           {/* Preview */}

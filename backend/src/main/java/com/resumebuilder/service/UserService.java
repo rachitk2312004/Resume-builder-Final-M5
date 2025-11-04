@@ -55,6 +55,15 @@ public class UserService {
         
         return userRepository.save(user);
     }
+
+    public User updateAllowExternalAi(Long userId, Boolean allowExternalAi) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (allowExternalAi != null) {
+            user.setAllowExternalAi(allowExternalAi);
+        }
+        return userRepository.save(user);
+    }
     
     public User changePassword(Long userId, String currentPassword, String newPassword) {
         User user = userRepository.findById(userId)
