@@ -39,7 +39,8 @@ public class PortfolioAnalyticsService {
                 analyticsRepository.save(analytics);
                 
                 // Increment portfolio view count
-                portfolio.setViewsCount(portfolio.getViewsCount() + 1);
+                Long currentViews = portfolio.getViewsCount() != null ? portfolio.getViewsCount() : 0L;
+                portfolio.setViewsCount(currentViews + 1);
             }
         } catch (Exception e) {
             // Log error but don't fail the request

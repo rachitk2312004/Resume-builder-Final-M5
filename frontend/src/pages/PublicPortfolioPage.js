@@ -14,6 +14,71 @@ const PublicPortfolioPage = () => {
     fetchPortfolio();
   }, [slug]);
 
+  const updateOrCreateMetaTag = (property, content) => {
+    let element = document.querySelector(`meta[property="${property}"]`);
+    if (!element) {
+      element = document.querySelector(`meta[name="${property}"]`);
+    }
+    if (!element) {
+      element = document.createElement('meta');
+      if (property.startsWith('og:') || property.startsWith('twitter:')) {
+        element.setAttribute('property', property);
+      } else {
+        element.setAttribute('name', property);
+      }
+      document.head.appendChild(element);
+    }
+    element.setAttribute('content', content);
+  };
+
+  // Update SEO meta tags when portfolio loads
+  useEffect(() => {
+    if (portfolio) {
+      const portfolioData = portfolio.jsonContent ? JSON.parse(portfolio.jsonContent) : {};
+      
+      // Update document title
+      if (portfolio.seoTitle) {
+        document.title = portfolio.seoTitle;
+      } else if (portfolioData.name && portfolioData.title) {
+        document.title = `${portfolioData.name} - ${portfolioData.title}`;
+      } else {
+        document.title = portfolio.title || 'Portfolio';
+      }
+      
+      // Update meta description
+      let metaDescription = portfolio.seoDescription || portfolioData.about || 
+                           `Portfolio of ${portfolioData.name || portfolio.title}`;
+      let metaDescElement = document.querySelector('meta[name="description"]');
+      if (metaDescElement) {
+        metaDescElement.content = metaDescription;
+      } else {
+        metaDescElement = document.createElement('meta');
+        metaDescElement.name = 'description';
+        metaDescElement.content = metaDescription;
+        document.head.appendChild(metaDescElement);
+      }
+      
+      // Update Open Graph tags
+      const ogTitle = portfolio.seoTitle || document.title;
+      updateOrCreateMetaTag('og:title', ogTitle);
+      updateOrCreateMetaTag('og:description', metaDescription);
+      updateOrCreateMetaTag('og:type', 'website');
+      updateOrCreateMetaTag('og:url', window.location.href);
+      
+      if (portfolio.seoImageUrl) {
+        updateOrCreateMetaTag('og:image', portfolio.seoImageUrl);
+      }
+      
+      // Update Twitter Card tags
+      updateOrCreateMetaTag('twitter:card', 'summary_large_image');
+      updateOrCreateMetaTag('twitter:title', ogTitle);
+      updateOrCreateMetaTag('twitter:description', metaDescription);
+      if (portfolio.seoImageUrl) {
+        updateOrCreateMetaTag('twitter:image', portfolio.seoImageUrl);
+      }
+    }
+  }, [portfolio]);
+
   const fetchPortfolio = async () => {
     try {
       const response = await portfolioAPI.getPortfolioBySlug(slug);

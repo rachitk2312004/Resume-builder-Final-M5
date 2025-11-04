@@ -9,6 +9,10 @@ import CorporateTemplate from './CorporateTemplate';
 import StartupTemplate from './StartupTemplate';
 import FreelancerTemplate from './FreelancerTemplate';
 import AcademicTemplate from './AcademicTemplate';
+import ArtistTemplate from './ArtistTemplate';
+import ConsultantTemplate from './ConsultantTemplate';
+import PhotographerTemplate from './PhotographerTemplate';
+import WriterTemplate from './WriterTemplate';
 
 export const PORTFOLIO_TEMPLATE_REGISTRY = {
   modern: {
@@ -74,6 +78,38 @@ export const PORTFOLIO_TEMPLATE_REGISTRY = {
     category: 'academic',
     component: AcademicTemplate,
     preview: '/templates/academic-preview.jpg'
+  },
+  artist: {
+    id: 'artist',
+    name: 'Artist Portfolio',
+    description: 'Creative showcase for artists and designers',
+    category: 'creative',
+    component: ArtistTemplate,
+    preview: '/templates/artist-preview.jpg'
+  },
+  consultant: {
+    id: 'consultant',
+    name: 'Consultant',
+    description: 'Professional layout for consultants',
+    category: 'business',
+    component: ConsultantTemplate,
+    preview: '/templates/consultant-preview.jpg'
+  },
+  photographer: {
+    id: 'photographer',
+    name: 'Photographer',
+    description: 'Visual portfolio for photographers',
+    category: 'creative',
+    component: PhotographerTemplate,
+    preview: '/templates/photographer-preview.jpg'
+  },
+  writer: {
+    id: 'writer',
+    name: 'Writer Portfolio',
+    description: 'Minimal layout for writers and authors',
+    category: 'minimal',
+    component: WriterTemplate,
+    preview: '/templates/writer-preview.jpg'
   }
 };
 

@@ -44,7 +44,7 @@ public class Portfolio {
     @Column(name = "public_link")
     private String publicLink;
     
-    @Column(name = "views_count", nullable = false)
+    @Column(name = "views_count")
     private Long viewsCount = 0L;
     
     @Column(name = "seo_title")
@@ -195,5 +195,12 @@ public class Portfolio {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    @PrePersist
+    public void ensureDefaults() {
+        if (this.viewsCount == null) {
+            this.viewsCount = 0L;
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.resumebuilder.dto.PortfolioDto;
 import com.resumebuilder.dto.PortfolioTemplateDto;
 import com.resumebuilder.entity.Portfolio;
 import com.resumebuilder.entity.User;
+import com.resumebuilder.repository.PortfolioRepository;
 import com.resumebuilder.service.PortfolioService;
 import com.resumebuilder.service.PortfolioTemplateService;
 import com.resumebuilder.service.PortfolioAnalyticsService;
@@ -35,6 +36,9 @@ public class PortfolioController {
     
     @Autowired
     private PortfolioAnalyticsService analyticsService;
+    
+    @Autowired
+    private PortfolioRepository portfolioRepository;
     
     @GetMapping
     public ResponseEntity<?> getUserPortfolios(Authentication authentication) {
@@ -75,19 +79,28 @@ public class PortfolioController {
     }
     
     @PostMapping
-    public ResponseEntity<?> createPortfolio(@RequestBody Map<String, String> request, 
+    public ResponseEntity<?> createPortfolio(@RequestBody Map<String, Object> request, 
                                            Authentication authentication) {
         try {
             String email = authentication.getName();
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
-            String title = request.get("title");
+            String title = request.get("title") != null ? request.get("title").toString() : null;
             if (title == null || title.trim().isEmpty()) {
                 title = "New Portfolio";
             }
             
+            String templateId = request.get("templateId") != null ? request.get("templateId").toString() : "modern";
+            String jsonContent = request.get("jsonContent") != null ? request.get("jsonContent").toString() : null;
+            
             Portfolio portfolio = portfolioService.createPortfolio(user, title);
+            portfolio.setTemplateId(templateId);
+            if (jsonContent != null) {
+                portfolio.setJsonContent(jsonContent);
+            }
+            portfolio = portfolioRepository.save(portfolio);
+            
             return ResponseEntity.ok(new PortfolioDto(portfolio));
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
@@ -105,16 +118,7 @@ public class PortfolioController {
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
-            String title = (String) updates.get("title");
-            String jsonContent = (String) updates.get("jsonContent");
-            Boolean isPublic = (Boolean) updates.get("isPublic");
-            
-            Portfolio.Status status = null;
-            if (updates.get("status") != null) {
-                status = Portfolio.Status.valueOf(updates.get("status").toString());
-            }
-            
-            Portfolio portfolio = portfolioService.updatePortfolio(id, user, title, jsonContent, status, isPublic);
+            Portfolio portfolio = portfolioService.updatePortfolio(id, user, updates);
             return ResponseEntity.ok(new PortfolioDto(portfolio));
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();

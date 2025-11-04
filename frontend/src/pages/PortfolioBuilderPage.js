@@ -49,6 +49,13 @@ const PortfolioBuilderPage = () => {
   const [sections, setSections] = useState([]);
   const [showAddSection, setShowAddSection] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+  const [showExpModal, setShowExpModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [showSkillModal, setShowSkillModal] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [expForm, setExpForm] = useState({ title: '', company: '', startDate: '', endDate: '', description: '', responsibilities: [] });
+  const [projectForm, setProjectForm] = useState({ name: '', description: '', technologies: '', demo: '', github: '' });
+  const [skillForm, setSkillForm] = useState({ name: '', level: 85 });
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -285,34 +292,214 @@ const PortfolioBuilderPage = () => {
     }
   };
 
-  const addSection = (sectionType) => {
-    const newSection = {
-      id: Date.now().toString(),
-      type: sectionType,
-      title: sectionType.charAt(0).toUpperCase() + sectionType.slice(1),
-      items: [],
-      isFixed: sectionType === 'personal'
+  const openExpModal = (index = null) => {
+    if (index !== null) {
+      const exp = portfolioData.experience[index];
+      setExpForm({
+        title: exp.title || exp.position || '',
+        company: exp.company || exp.organization || '',
+        startDate: exp.startDate || '',
+        endDate: exp.endDate || '',
+        description: exp.description || '',
+        responsibilities: exp.responsibilities || []
+      });
+      setEditingIndex(index);
+    } else {
+      setExpForm({ title: '', company: '', startDate: '', endDate: '', description: '', responsibilities: [] });
+      setEditingIndex(null);
+    }
+    setShowExpModal(true);
+  };
+
+  const saveExperience = () => {
+    const experiences = [...portfolioData.experience];
+    const newExp = {
+      title: expForm.title,
+      company: expForm.company,
+      startDate: expForm.startDate,
+      endDate: expForm.endDate,
+      description: expForm.description,
+      responsibilities: expForm.responsibilities
     };
     
-    setSections(prev => [...prev, newSection]);
-    
-    // Update portfolio data
-    const updatedData = { ...portfolioData };
-    if (!updatedData[sectionType]) {
-      updatedData[sectionType] = [];
+    if (editingIndex !== null) {
+      experiences[editingIndex] = newExp;
+    } else {
+      experiences.push(newExp);
     }
+    
+    const updatedData = { ...portfolioData, experience: experiences };
     setPortfolioData(updatedData);
     
-    // Auto-save
     if (id) {
-      const updatedFormData = {
-        ...formData,
-        jsonContent: JSON.stringify(updatedData)
-      };
+      const updatedFormData = { ...formData, jsonContent: JSON.stringify(updatedData) };
       savePortfolio(id, updatedFormData);
     }
     
-    toast.success(`${sectionType} section added successfully`);
+    setShowExpModal(false);
+    toast.success(`Experience ${editingIndex !== null ? 'updated' : 'added'} successfully`);
+  };
+
+  const deleteExperience = (index) => {
+    const experiences = portfolioData.experience.filter((_, i) => i !== index);
+    const updatedData = { ...portfolioData, experience: experiences };
+    setPortfolioData(updatedData);
+    
+    if (id) {
+      const updatedFormData = { ...formData, jsonContent: JSON.stringify(updatedData) };
+      savePortfolio(id, updatedFormData);
+    }
+    
+    toast.success('Experience deleted successfully');
+  };
+
+  const openProjectModal = (index = null) => {
+    if (index !== null) {
+      const project = portfolioData.projects[index];
+      setProjectForm({
+        name: project.name || project.title || '',
+        description: project.description || '',
+        technologies: Array.isArray(project.technologies) ? project.technologies.join(', ') : '',
+        demo: project.demo || '',
+        github: project.github || ''
+      });
+      setEditingIndex(index);
+    } else {
+      setProjectForm({ name: '', description: '', technologies: '', demo: '', github: '' });
+      setEditingIndex(null);
+    }
+    setShowProjectModal(true);
+  };
+
+  const saveProject = () => {
+    const projects = [...portfolioData.projects];
+    const techArray = projectForm.technologies.split(',').map(t => t.trim()).filter(t => t);
+    const newProject = {
+      name: projectForm.name,
+      title: projectForm.name,
+      description: projectForm.description,
+      technologies: techArray,
+      demo: projectForm.demo,
+      github: projectForm.github
+    };
+    
+    if (editingIndex !== null) {
+      projects[editingIndex] = newProject;
+    } else {
+      projects.push(newProject);
+    }
+    
+    const updatedData = { ...portfolioData, projects };
+    setPortfolioData(updatedData);
+    
+    if (id) {
+      const updatedFormData = { ...formData, jsonContent: JSON.stringify(updatedData) };
+      savePortfolio(id, updatedFormData);
+    }
+    
+    setShowProjectModal(false);
+    toast.success(`Project ${editingIndex !== null ? 'updated' : 'added'} successfully`);
+  };
+
+  const deleteProject = (index) => {
+    const projects = portfolioData.projects.filter((_, i) => i !== index);
+    const updatedData = { ...portfolioData, projects };
+    setPortfolioData(updatedData);
+    
+    if (id) {
+      const updatedFormData = { ...formData, jsonContent: JSON.stringify(updatedData) };
+      savePortfolio(id, updatedFormData);
+    }
+    
+    toast.success('Project deleted successfully');
+  };
+
+  const openSkillModal = (index = null) => {
+    if (index !== null) {
+      const skill = portfolioData.skills[index];
+      setSkillForm({
+        name: skill.name || skill || '',
+        level: skill.level || 85
+      });
+      setEditingIndex(index);
+    } else {
+      setSkillForm({ name: '', level: 85 });
+      setEditingIndex(null);
+    }
+    setShowSkillModal(true);
+  };
+
+  const saveSkill = () => {
+    const skills = [...portfolioData.skills];
+    const newSkill = { name: skillForm.name, level: skillForm.level };
+    
+    if (editingIndex !== null) {
+      skills[editingIndex] = newSkill;
+    } else {
+      skills.push(newSkill);
+    }
+    
+    const updatedData = { ...portfolioData, skills };
+    setPortfolioData(updatedData);
+    
+    if (id) {
+      const updatedFormData = { ...formData, jsonContent: JSON.stringify(updatedData) };
+      savePortfolio(id, updatedFormData);
+    }
+    
+    setShowSkillModal(false);
+    toast.success(`Skill ${editingIndex !== null ? 'updated' : 'added'} successfully`);
+  };
+
+  const deleteSkill = (index) => {
+    const skills = portfolioData.skills.filter((_, i) => i !== index);
+    const updatedData = { ...portfolioData, skills };
+    setPortfolioData(updatedData);
+    
+    if (id) {
+      const updatedFormData = { ...formData, jsonContent: JSON.stringify(updatedData) };
+      savePortfolio(id, updatedFormData);
+    }
+    
+    toast.success('Skill deleted successfully');
+  };
+
+  const addSection = (sectionType) => {
+    if (sectionType === 'experience') {
+      openExpModal();
+    } else if (sectionType === 'projects') {
+      openProjectModal();
+    } else if (sectionType === 'skills') {
+      openSkillModal();
+    } else {
+      const newSection = {
+        id: Date.now().toString(),
+        type: sectionType,
+        title: sectionType.charAt(0).toUpperCase() + sectionType.slice(1),
+        items: [],
+        isFixed: sectionType === 'personal'
+      };
+      
+      setSections(prev => [...prev, newSection]);
+      
+      // Update portfolio data
+      const updatedData = { ...portfolioData };
+      if (!updatedData[sectionType]) {
+        updatedData[sectionType] = [];
+      }
+      setPortfolioData(updatedData);
+      
+      // Auto-save
+      if (id) {
+        const updatedFormData = {
+          ...formData,
+          jsonContent: JSON.stringify(updatedData)
+        };
+        savePortfolio(id, updatedFormData);
+      }
+      
+      toast.success(`${sectionType} section added successfully`);
+    }
   };
 
   const addCustomSection = () => {
@@ -693,15 +880,29 @@ const PortfolioBuilderPage = () => {
                 
                 <div className="space-y-4">
                   {portfolioData.experience.map((exp, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-gray-900">{exp.title || exp.position}</h3>
-                        <button className="text-red-600 hover:text-red-800">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => openExpModal(index)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Edit"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => deleteExperience(index)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                       <p className="text-gray-600 mb-2">{exp.company || exp.organization}</p>
-                      <p className="text-sm text-gray-500">{exp.period || `${exp.startDate} - ${exp.endDate}`}</p>
+                      <p className="text-sm text-gray-500 mb-2">{exp.period || `${exp.startDate} - ${exp.endDate}`}</p>
+                      {exp.description && <p className="text-gray-600 text-sm">{exp.description}</p>}
                     </div>
                   ))}
                   
@@ -731,16 +932,29 @@ const PortfolioBuilderPage = () => {
                 
                 <div className="space-y-4">
                   {portfolioData.projects.map((project, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-gray-900">{project.name || project.title}</h3>
-                        <button className="text-red-600 hover:text-red-800">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => openProjectModal(index)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Edit"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => deleteProject(index)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                       <p className="text-gray-600 mb-2">{project.description}</p>
                       {project.technologies && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 mb-2">
                           {project.technologies.map((tech, techIndex) => (
                             <span key={techIndex} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                               {tech}
@@ -777,7 +991,7 @@ const PortfolioBuilderPage = () => {
                 
                 <div className="space-y-4">
                   {portfolioData.skills.map((skill, index) => (
-                    <div key={index} className="flex items-center justify-between border border-gray-200 rounded-lg p-4">
+                    <div key={index} className="flex items-center justify-between border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex-1">
                         <span className="font-medium text-gray-900">{skill.name || skill}</span>
                         {skill.level && (
@@ -789,9 +1003,22 @@ const PortfolioBuilderPage = () => {
                           </div>
                         )}
                       </div>
-                      <button className="text-red-600 hover:text-red-800 ml-4">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex gap-2 ml-4">
+                        <button 
+                          onClick={() => openSkillModal(index)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => deleteSkill(index)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                   
@@ -1068,6 +1295,173 @@ const PortfolioBuilderPage = () => {
             >
               Add Section
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Experience Modal */}
+      <Modal
+        open={showExpModal}
+        onClose={() => setShowExpModal(false)}
+        title={editingIndex !== null ? 'Edit Experience' : 'Add Experience'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
+            <input
+              type="text"
+              value={expForm.title}
+              onChange={(e) => setExpForm(prev => ({ ...prev, title: e.target.value }))}
+              className="input-field"
+              placeholder="Software Engineer"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+            <input
+              type="text"
+              value={expForm.company}
+              onChange={(e) => setExpForm(prev => ({ ...prev, company: e.target.value }))}
+              className="input-field"
+              placeholder="Company Name"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+              <input
+                type="month"
+                value={expForm.startDate}
+                onChange={(e) => setExpForm(prev => ({ ...prev, startDate: e.target.value }))}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+              <input
+                type="month"
+                value={expForm.endDate}
+                onChange={(e) => setExpForm(prev => ({ ...prev, endDate: e.target.value }))}
+                className="input-field"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea
+              value={expForm.description}
+              onChange={(e) => setExpForm(prev => ({ ...prev, description: e.target.value }))}
+              rows={4}
+              className="input-field"
+              placeholder="Describe your role and achievements..."
+            />
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button onClick={() => setShowExpModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={saveExperience} className="btn-primary">Save</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Project Modal */}
+      <Modal
+        open={showProjectModal}
+        onClose={() => setShowProjectModal(false)}
+        title={editingIndex !== null ? 'Edit Project' : 'Add Project'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
+            <input
+              type="text"
+              value={projectForm.name}
+              onChange={(e) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
+              className="input-field"
+              placeholder="My Awesome Project"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea
+              value={projectForm.description}
+              onChange={(e) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
+              rows={4}
+              className="input-field"
+              placeholder="Describe your project..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Technologies</label>
+            <input
+              type="text"
+              value={projectForm.technologies}
+              onChange={(e) => setProjectForm(prev => ({ ...prev, technologies: e.target.value }))}
+              className="input-field"
+              placeholder="React, Node.js, MongoDB (comma separated)"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">GitHub URL</label>
+              <input
+                type="url"
+                value={projectForm.github}
+                onChange={(e) => setProjectForm(prev => ({ ...prev, github: e.target.value }))}
+                className="input-field"
+                placeholder="https://github.com/..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Demo URL</label>
+              <input
+                type="url"
+                value={projectForm.demo}
+                onChange={(e) => setProjectForm(prev => ({ ...prev, demo: e.target.value }))}
+                className="input-field"
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button onClick={() => setShowProjectModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={saveProject} className="btn-primary">Save</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Skill Modal */}
+      <Modal
+        open={showSkillModal}
+        onClose={() => setShowSkillModal(false)}
+        title={editingIndex !== null ? 'Edit Skill' : 'Add Skill'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Skill Name</label>
+            <input
+              type="text"
+              value={skillForm.name}
+              onChange={(e) => setSkillForm(prev => ({ ...prev, name: e.target.value }))}
+              className="input-field"
+              placeholder="JavaScript"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Proficiency Level: {skillForm.level}%
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={skillForm.level}
+              onChange={(e) => setSkillForm(prev => ({ ...prev, level: parseInt(e.target.value) }))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button onClick={() => setShowSkillModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={saveSkill} className="btn-primary">Save</button>
           </div>
         </div>
       </Modal>

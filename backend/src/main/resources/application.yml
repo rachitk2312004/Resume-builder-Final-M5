@@ -1,11 +1,12 @@
 spring:
   application:
     name: ai-resume-portfolio-builder
-  
+
+    
   datasource:
-    url: jdbc:postgresql://dpg-d3160s0dl3ps73e3lddg-a.oregon-postgres.render.com:5432/resume_portfolio_builder
-    username: resume_portfolio_builder_user
-    password: ViEfLKIh9yeeno61M9pVOLpqjYrmzFtj
+    url: jdbc:postgresql://dpg-d3vg3f3ipnbc739khcc0-a.oregon-postgres.render.com:5432/resume_portfolio_builder_px72
+    username: resume_portfolio_builder_px72_user
+    password: nJv6cUpNDm1hnpPw2lcCKFXwXMxmT0ZR
     driver-class-name: org.postgresql.Driver
   
   jpa:
@@ -23,7 +24,7 @@ spring:
       password: admin
 
 server:
-  port: 8080
+  port: 8081
 
 jwt:
   secret: mySecretKey123456789012345678901234567890
