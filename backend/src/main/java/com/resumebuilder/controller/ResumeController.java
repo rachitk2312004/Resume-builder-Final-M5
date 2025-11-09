@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,15 +35,18 @@ public class ResumeController {
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
             List<Resume> resumes = resumeService.getUserResumes(user);
-            List<ResumeDto> resumeDtos = resumes.stream()
+            List<ResumeDto> resumeDtos = resumes != null ? resumes.stream()
                     .map(ResumeDto::new)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()) : new ArrayList<>();
             
             return ResponseEntity.ok(resumeDtos);
         } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Error fetching resumes: " + e.getMessage());
+            e.printStackTrace();
             Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            error.put("error", e.getMessage() != null ? e.getMessage() : "Failed to fetch resumes");
+            return ResponseEntity.status(500).body(error);
         }
     }
     
@@ -98,18 +102,44 @@ public class ResumeController {
             String title = (String) updates.get("title");
             String jsonContent = (String) updates.get("jsonContent");
             Boolean isPublic = (Boolean) updates.get("isPublic");
+            Object templateIdObj = updates.get("templateId");
+            
+            // Handle templateId if provided
+            if (templateIdObj != null) {
+                Integer templateId = null;
+                if (templateIdObj instanceof Integer) {
+                    templateId = (Integer) templateIdObj;
+                } else if (templateIdObj instanceof Number) {
+                    templateId = ((Number) templateIdObj).intValue();
+                } else {
+                    try {
+                        templateId = Integer.parseInt(templateIdObj.toString());
+                    } catch (NumberFormatException e) {
+                        // Ignore invalid templateId
+                    }
+                }
+                // Note: templateId handling would need to be added to ResumeService if needed
+            }
             
             Resume.Status status = null;
             if (updates.get("status") != null) {
-                status = Resume.Status.valueOf(updates.get("status").toString());
+                try {
+                    status = Resume.Status.valueOf(updates.get("status").toString());
+                } catch (IllegalArgumentException e) {
+                    // Invalid status, keep current status
+                    System.err.println("Invalid status value: " + updates.get("status"));
+                }
             }
             
             Resume resume = resumeService.updateResume(id, user, title, jsonContent, status, isPublic);
             return ResponseEntity.ok(new ResumeDto(resume));
         } catch (Exception e) {
+            // Log error for debugging
+            System.err.println("Error updating resume: " + e.getMessage());
+            e.printStackTrace();
             Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            error.put("error", e.getMessage() != null ? e.getMessage() : "Failed to update resume");
+            return ResponseEntity.status(500).body(error);
         }
     }
     

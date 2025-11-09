@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,15 +49,19 @@ public class PortfolioController {
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
             List<Portfolio> portfolios = portfolioService.getUserPortfolios(user);
-            List<PortfolioDto> portfolioDtos = portfolios.stream()
+            List<PortfolioDto> portfolioDtos = portfolios != null ? portfolios.stream()
                     .map(PortfolioDto::new)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()) : new ArrayList<>();
             
             return ResponseEntity.ok(portfolioDtos);
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            // Log the error for debugging
+            System.err.println("Error fetching portfolios: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Return empty list instead of error to prevent dashboard failure
+            // This allows the dashboard to load even if portfolios fail
+            return ResponseEntity.ok(new ArrayList<>());
         }
     }
     
@@ -118,12 +123,18 @@ public class PortfolioController {
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
+            // Log the update for debugging
+            System.out.println("Updating portfolio " + id + " with fields: " + updates.keySet());
+            
             Portfolio portfolio = portfolioService.updatePortfolio(id, user, updates);
             return ResponseEntity.ok(new PortfolioDto(portfolio));
         } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Error updating portfolio: " + e.getMessage());
+            e.printStackTrace();
             Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            error.put("error", e.getMessage() != null ? e.getMessage() : "Failed to update portfolio");
+            return ResponseEntity.status(500).body(error);
         }
     }
     

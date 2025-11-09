@@ -25,10 +25,64 @@ export default function AIFeaturesPanel({ resumeText, jobText, bullets = [], onA
     }
   };
 
-  const generateSummary = () => call(aiAPI.generateSummary, { jobDescription: jobText, resumeText, existingSummary: '' }, (d) => setSummary(d.summary));
-  const rewriteBullets = () => call(aiAPI.rewriteBullets, { bullets, jobDescription: jobText }, (d) => setRewrites(JSON.parse(d.rewrites || '[]')));
-  const suggestSkills = () => call(aiAPI.suggestSkills, { jobDescription: jobText, resumeText }, (d) => setSkills(JSON.parse(d.skills || '{}')));
-  const atsScore = () => call(aiAPI.atsScore, { jobDescription: jobText, resumeText }, (d) => { setAts(JSON.parse(d.ats || '{}')); onAtsUpdate && onAtsUpdate(d.ats); });
+  const generateSummary = () => {
+    call(aiAPI.generateSummary, { jobDescription: jobText || '', resumeText: resumeText || '', existingSummary: '' }, (d) => {
+      try {
+        const summaryText = d.summary || '';
+        // Try to parse as JSON if it's a JSON string
+        if (summaryText.startsWith('{') || summaryText.startsWith('[')) {
+          const parsed = JSON.parse(summaryText);
+          setSummary(parsed);
+        } else {
+          // If not JSON, create a simple summary object
+          setSummary({ concise: summaryText, balanced: summaryText, detailed: summaryText });
+        }
+      } catch (e) {
+        // If parsing fails, use as plain text
+        setSummary({ concise: d.summary || '', balanced: d.summary || '', detailed: d.summary || '' });
+      }
+    });
+  };
+  
+  const rewriteBullets = () => {
+    call(aiAPI.rewriteBullets, { bullets: bullets || [], jobDescription: jobText || '' }, (d) => {
+      try {
+        const rewritesText = d.rewrites || '[]';
+        const parsed = typeof rewritesText === 'string' ? JSON.parse(rewritesText) : rewritesText;
+        setRewrites(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+        console.error('Failed to parse rewrites:', e);
+        setRewrites([]);
+      }
+    });
+  };
+  
+  const suggestSkills = () => {
+    call(aiAPI.suggestSkills, { jobDescription: jobText || '', resumeText: resumeText || '' }, (d) => {
+      try {
+        const skillsText = d.skills || '{}';
+        const parsed = typeof skillsText === 'string' ? JSON.parse(skillsText) : skillsText;
+        setSkills(parsed);
+      } catch (e) {
+        console.error('Failed to parse skills:', e);
+        setSkills({ categories: [], clusters: [], synonyms: [] });
+      }
+    });
+  };
+  
+  const atsScore = () => {
+    call(aiAPI.atsScore, { jobDescription: jobText || '', resumeText: resumeText || '' }, (d) => {
+      try {
+        const atsText = d.ats || '{}';
+        const parsed = typeof atsText === 'string' ? JSON.parse(atsText) : atsText;
+        setAts(parsed);
+        if (onAtsUpdate) onAtsUpdate(parsed);
+      } catch (e) {
+        console.error('Failed to parse ATS score:', e);
+        setAts({ overallScore: 0, score: 0 });
+      }
+    });
+  };
 
   return (
     <div className="card">

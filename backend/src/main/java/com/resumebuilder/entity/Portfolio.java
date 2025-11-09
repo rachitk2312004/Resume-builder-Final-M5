@@ -28,7 +28,7 @@ public class Portfolio {
     @Column(name = "slug", unique = true)
     private String slug;
     
-    @Column(name = "template_id", nullable = false)
+    @Column(name = "template_id", nullable = false, length = 50)
     private String templateId = "modern";
     
     @Enumerated(EnumType.STRING)
@@ -198,9 +198,22 @@ public class Portfolio {
     }
 
     @PrePersist
+    @PreUpdate
     public void ensureDefaults() {
         if (this.viewsCount == null) {
             this.viewsCount = 0L;
+        }
+        if (this.templateId == null || this.templateId.trim().isEmpty()) {
+            this.templateId = "modern";
+        }
+        if (this.status == null) {
+            this.status = Status.IN_PROGRESS;
+        }
+        if (this.isPublic == null) {
+            this.isPublic = false;
+        }
+        if (this.title == null || this.title.trim().isEmpty()) {
+            this.title = "New Portfolio";
         }
     }
 }

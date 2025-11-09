@@ -81,7 +81,8 @@ const PortfolioBuilderPage = () => {
     projects: [],
     skills: [],
     education: [],
-    certifications: []
+    certifications: [],
+    customSections: []
   });
 
   useEffect(() => {
@@ -125,8 +126,14 @@ const PortfolioBuilderPage = () => {
           projects: data.projects || [],
           skills: data.skills || [],
           education: data.education || [],
-          certifications: data.certifications || []
+          certifications: data.certifications || [],
+          customSections: data.customSections || []
         });
+        
+        // Initialize sections state from customSections
+        if (data.customSections && data.customSections.length > 0) {
+          setSections(data.customSections);
+        }
       } catch (error) {
         console.error('Error parsing portfolio data:', error);
       }
@@ -135,14 +142,34 @@ const PortfolioBuilderPage = () => {
 
   // Auto-save functionality
   useEffect(() => {
-    if (id && formData.jsonContent) {
+    if (id && formData.jsonContent && portfolioData) {
       const timeoutId = setTimeout(() => {
-        savePortfolio(id, formData);
+        try {
+          // Ensure jsonContent is up-to-date with current portfolioData
+          const jsonContent = JSON.stringify(portfolioData, null, 2);
+          
+          // Validate required fields before saving
+          if (!formData.title || formData.title.trim() === '') {
+            return; // Don't save without a title
+          }
+
+          const saveData = {
+            ...formData,
+            jsonContent: jsonContent,
+            templateId: formData.templateId || 'modern',
+            status: formData.status || 'IN_PROGRESS',
+            isPublic: formData.isPublic !== undefined ? formData.isPublic : false,
+          };
+
+          savePortfolio(id, saveData);
+        } catch (error) {
+          console.error('Error preparing autosave payload:', error);
+        }
       }, 2000); // Auto-save after 2 seconds of inactivity
 
       return () => clearTimeout(timeoutId);
     }
-  }, [formData, id, savePortfolio]);
+  }, [formData, portfolioData, id, savePortfolio]);
 
   // Update JSON content when portfolio data changes
   useEffect(() => {
@@ -187,14 +214,7 @@ const PortfolioBuilderPage = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    // Auto-save when form data changes
-    if (id) {
-      const updatedFormData = {
-        ...formData,
-        [name]: type === 'checkbox' ? checked : value
-      };
-      savePortfolio(id, updatedFormData);
-    }
+    // Auto-save will be handled by useEffect
   };
 
   const handlePortfolioDataChange = (field, value) => {
@@ -202,15 +222,7 @@ const PortfolioBuilderPage = () => {
       ...prev,
       [field]: value
     }));
-    // Auto-save when portfolio data changes
-    if (id) {
-      const updatedData = { ...portfolioData, [field]: value };
-      const updatedFormData = {
-        ...formData,
-        jsonContent: JSON.stringify(updatedData)
-      };
-      savePortfolio(id, updatedFormData);
-    }
+    // Auto-save will be handled by useEffect
   };
 
   const handleTemplateChange = (templateId) => {
@@ -259,17 +271,27 @@ const PortfolioBuilderPage = () => {
 
   const handleSave = async () => {
     try {
+      // Ensure jsonContent is up-to-date with current portfolioData
+      const jsonContent = JSON.stringify(portfolioData, null, 2);
+      const saveData = {
+        ...formData,
+        jsonContent: jsonContent
+      };
+
       if (id) {
-        await portfolioAPI.updatePortfolio(id, formData);
+        await portfolioAPI.updatePortfolio(id, saveData);
         toast.success('Portfolio saved successfully');
+        // Refresh portfolio data
+        fetchPortfolio();
       } else {
-        const response = await portfolioAPI.createPortfolio(formData);
+        const response = await portfolioAPI.createPortfolio(saveData);
         navigate(`/portfolio-builder/${response.data.id}`);
         toast.success('Portfolio created successfully');
       }
     } catch (error) {
       console.error('Error saving portfolio:', error);
-      toast.error('Failed to save portfolio');
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to save portfolio';
+      toast.error(`Failed to save portfolio: ${errorMsg}`);
     }
   };
 
@@ -508,23 +530,70 @@ const PortfolioBuilderPage = () => {
       return;
     }
     
+    const sectionId = `custom-${Date.now()}`;
     const newSection = {
-      id: Date.now().toString(),
+      id: sectionId,
       type: 'custom',
       title: newSectionName.trim(),
       items: [],
       isFixed: false
     };
     
+    // Update sections state
     setSections(prev => [...prev, newSection]);
+    
+    // Update portfolioData with custom section
+    const updatedData = {
+      ...portfolioData,
+      customSections: [...(portfolioData.customSections || []), newSection]
+    };
+    setPortfolioData(updatedData);
+    
+    // Set active tab to the new section
+    setActiveTab(sectionId);
+    
     setNewSectionName('');
     setShowAddSection(false);
+    
+    // Auto-save
+    if (id) {
+      const jsonContent = JSON.stringify(updatedData, null, 2);
+      const updatedFormData = {
+        ...formData,
+        jsonContent: jsonContent
+      };
+      savePortfolio(id, updatedFormData);
+    }
     
     toast.success('Custom section added successfully');
   };
 
   const removeSection = (sectionId) => {
+    // Remove from sections state
     setSections(prev => prev.filter(section => section.id !== sectionId));
+    
+    // Remove from portfolioData
+    const updatedData = {
+      ...portfolioData,
+      customSections: (portfolioData.customSections || []).filter(section => section.id !== sectionId)
+    };
+    setPortfolioData(updatedData);
+    
+    // Switch to content tab if deleted section was active
+    if (activeTab === sectionId) {
+      setActiveTab('content');
+    }
+    
+    // Auto-save
+    if (id) {
+      const jsonContent = JSON.stringify(updatedData, null, 2);
+      const updatedFormData = {
+        ...formData,
+        jsonContent: jsonContent
+      };
+      savePortfolio(id, updatedFormData);
+    }
+    
     toast.success('Section removed successfully');
   };
 
@@ -662,6 +731,33 @@ const PortfolioBuilderPage = () => {
                   <Award className="w-4 h-4 inline mr-2" />
                   Skills
                 </button>
+                
+                {/* Custom Sections */}
+                {(portfolioData.customSections || []).map((section) => (
+                  <div key={section.id} className="flex items-center group">
+                    <button
+                      onClick={() => setActiveTab(section.id)}
+                      className={`flex-1 text-left px-3 py-2 rounded-lg ${
+                        activeTab === section.id ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <FileText className="w-4 h-4 inline mr-2" />
+                      {section.title}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Are you sure you want to delete "${section.title}"?`)) {
+                          removeSection(section.id);
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 p-1 transition-opacity"
+                      title="Delete section"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
                 
                 {/* Add Section Button */}
                 <button
@@ -1032,6 +1128,168 @@ const PortfolioBuilderPage = () => {
                 </div>
               </div>
             )}
+
+            {/* Custom Sections Content */}
+            {activeTab.startsWith('custom-') && (() => {
+              const customSection = (portfolioData.customSections || []).find(s => s.id === activeTab);
+              if (!customSection) return null;
+              
+              return (
+                <div className="card">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">{customSection.title}</h2>
+                    <button 
+                      onClick={() => {
+                        const newItem = { id: Date.now(), title: '', description: '', date: '' };
+                        const updatedSection = {
+                          ...customSection,
+                          items: [...(customSection.items || []), newItem]
+                        };
+                        const updatedData = {
+                          ...portfolioData,
+                          customSections: (portfolioData.customSections || []).map(s => 
+                            s.id === customSection.id ? updatedSection : s
+                          )
+                        };
+                        setPortfolioData(updatedData);
+                        
+                        // Update sections state
+                        setSections(sections.map(s => s.id === customSection.id ? updatedSection : s));
+                        
+                        // Auto-save
+                        if (id) {
+                          const jsonContent = JSON.stringify(updatedData, null, 2);
+                          const updatedFormData = { ...formData, jsonContent };
+                          savePortfolio(id, updatedFormData);
+                        }
+                      }}
+                      className="btn-primary"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Item
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {(customSection.items || []).map((item, index) => (
+                      <div key={item.id || index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              value={item.title || ''}
+                              onChange={(e) => {
+                                const updatedItems = [...(customSection.items || [])];
+                                updatedItems[index] = { ...item, title: e.target.value };
+                                const updatedSection = { ...customSection, items: updatedItems };
+                                const updatedData = {
+                                  ...portfolioData,
+                                  customSections: (portfolioData.customSections || []).map(s => 
+                                    s.id === customSection.id ? updatedSection : s
+                                  )
+                                };
+                                setPortfolioData(updatedData);
+                                setSections(sections.map(s => s.id === customSection.id ? updatedSection : s));
+                              }}
+                              className="input-field"
+                              placeholder="Enter title"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Description
+                            </label>
+                            <textarea
+                              value={item.description || ''}
+                              onChange={(e) => {
+                                const updatedItems = [...(customSection.items || [])];
+                                updatedItems[index] = { ...item, description: e.target.value };
+                                const updatedSection = { ...customSection, items: updatedItems };
+                                const updatedData = {
+                                  ...portfolioData,
+                                  customSections: (portfolioData.customSections || []).map(s => 
+                                    s.id === customSection.id ? updatedSection : s
+                                  )
+                                };
+                                setPortfolioData(updatedData);
+                                setSections(sections.map(s => s.id === customSection.id ? updatedSection : s));
+                              }}
+                              rows={3}
+                              className="input-field"
+                              placeholder="Enter description"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Date (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={item.date || ''}
+                              onChange={(e) => {
+                                const updatedItems = [...(customSection.items || [])];
+                                updatedItems[index] = { ...item, date: e.target.value };
+                                const updatedSection = { ...customSection, items: updatedItems };
+                                const updatedData = {
+                                  ...portfolioData,
+                                  customSections: (portfolioData.customSections || []).map(s => 
+                                    s.id === customSection.id ? updatedSection : s
+                                  )
+                                };
+                                setPortfolioData(updatedData);
+                                setSections(sections.map(s => s.id === customSection.id ? updatedSection : s));
+                              }}
+                              className="input-field"
+                              placeholder="e.g., 2020 - 2024"
+                            />
+                          </div>
+                          <div className="flex justify-end">
+                            <button 
+                              onClick={() => {
+                                const updatedItems = (customSection.items || []).filter((_, i) => i !== index);
+                                const updatedSection = { ...customSection, items: updatedItems };
+                                const updatedData = {
+                                  ...portfolioData,
+                                  customSections: (portfolioData.customSections || []).map(s => 
+                                    s.id === customSection.id ? updatedSection : s
+                                  )
+                                };
+                                setPortfolioData(updatedData);
+                                setSections(sections.map(s => s.id === customSection.id ? updatedSection : s));
+                                
+                                // Auto-save
+                                if (id) {
+                                  const jsonContent = JSON.stringify(updatedData, null, 2);
+                                  const updatedFormData = { ...formData, jsonContent };
+                                  savePortfolio(id, updatedFormData);
+                                }
+                                
+                                toast.success('Item deleted');
+                              }}
+                              className="text-red-600 hover:text-red-800"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {(customSection.items || []).length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p>No items added yet</p>
+                        <p className="text-sm">Click "Add Item" to get started</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {activeTab === 'settings' && (
               <div className="card">

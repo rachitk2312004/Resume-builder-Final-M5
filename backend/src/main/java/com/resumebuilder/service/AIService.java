@@ -1,5 +1,7 @@
 package com.resumebuilder.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ public class AIService {
     private String apiUrl;
 
     private final OkHttpClient client = new OkHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public String generateProfessionalSummary(Map<String, Object> payload) throws IOException {
         String jobDesc = (String) payload.getOrDefault("jobDescription", "");
@@ -52,8 +55,16 @@ public class AIService {
         if (apiKey == null || apiKey.isEmpty()) {
             return "[AI not configured] " + prompt;
         }
+        
+        // Escape prompt properly for JSON
+        String escapedPrompt = prompt.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+        
         MediaType json = MediaType.parse("application/json; charset=utf-8");
-        String body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"" + prompt.replace("\"", "\\\"") + "\"}],\"temperature\":0.2}";
+        String body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"" + escapedPrompt + "\"}],\"temperature\":0.2}";
         Request request = new Request.Builder()
                 .url(apiUrl + "/chat/completions")
                 .addHeader("Authorization", "Bearer " + apiKey)
@@ -61,9 +72,42 @@ public class AIService {
                 .build();
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                return "AI error: " + response.code();
+                String errorBody = response.body() != null ? response.body().string() : "";
+                return "AI error: " + response.code() + " - " + errorBody;
             }
-            return response.body() != null ? response.body().string() : "";
+            
+            String responseBody = response.body() != null ? response.body().string() : "";
+            // Parse OpenAI response to extract content
+            try {
+                JsonNode jsonNode = objectMapper.readTree(responseBody);
+                JsonNode choices = jsonNode.get("choices");
+                if (choices != null && choices.isArray() && choices.size() > 0) {
+                    JsonNode firstChoice = choices.get(0);
+                    JsonNode message = firstChoice.get("message");
+                    if (message != null) {
+                        JsonNode content = message.get("content");
+                        if (content != null && content.isTextual()) {
+                            return content.asText();
+                        }
+                    }
+                }
+                // Fallback: return raw response if parsing fails
+                return responseBody;
+            } catch (Exception e) {
+                // If JSON parsing fails, try simple string extraction as fallback
+                if (responseBody.contains("\"content\"")) {
+                    try {
+                        int contentStart = responseBody.indexOf("\"content\"") + 10;
+                        int quoteStart = responseBody.indexOf("\"", contentStart);
+                        if (quoteStart > contentStart) {
+                            return responseBody.substring(quoteStart + 1, responseBody.indexOf("\"", quoteStart + 1));
+                        }
+                    } catch (Exception ex) {
+                        // Ignore
+                    }
+                }
+                return responseBody;
+            }
         }
     }
 

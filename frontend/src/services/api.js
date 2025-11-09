@@ -23,11 +23,25 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor to handle token refresh and blob error responses
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    
+    // Handle blob error responses - convert to JSON if possible
+    if (error.response && error.response.data instanceof Blob && originalRequest.responseType === 'blob') {
+      try {
+        const text = await error.response.data.text();
+        const contentType = error.response.headers['content-type'] || '';
+        if (contentType.includes('application/json') || text.trim().startsWith('{')) {
+          error.response.data = JSON.parse(text);
+        }
+      } catch (e) {
+        // Failed to parse, keep original error
+        console.error('Failed to parse error blob:', e);
+      }
+    }
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -162,6 +176,44 @@ export const aiLogsAPI = {
 export const atsHistoryAPI = {
   getHistory: (page = 0, size = 20) => api.get(`/ats/history?page=${page}&size=${size}`),
   exportHistory: () => api.get('/ats/history/export', { responseType: 'blob' }),
+};
+
+// Export API (enhanced)
+export const exportAPIEnhanced = {
+  pdf: (id, html) => api.post(`/export/pdf/${id}`, { html }, { responseType: 'blob' }),
+  docx: (id, html) => api.post(`/export/docx/${id}`, { html }, { responseType: 'blob' }),
+  text: (id, html) => api.post(`/export/text/${id}`, { html }, { responseType: 'text' }),
+  email: (id, html, type, email) => api.post(`/export/email/${id}`, { html, type, email }),
+  share: (id) => api.post(`/export/share/${id}`, {}),
+};
+
+// Admin API
+export const adminAPI = {
+  dashboard: () => api.get('/admin/dashboard'),
+  users: () => api.get('/admin/users'),
+  templates: () => api.get('/admin/templates'),
+  addTemplate: (template) => api.post('/admin/template/add', template),
+  deleteTemplate: (id) => api.delete(`/admin/template/${id}`),
+  logs: () => api.get('/admin/logs'),
+};
+
+// Billing API
+export const billingAPI = {
+  createSession: (planType, amount, description) => api.post('/payment/create-session', { planType, amount, description }),
+  getStatus: (userId) => api.get(`/payment/status/${userId}`),
+};
+
+// Notifications API
+export const notificationsAPI = {
+  getAll: () => api.get('/notifications'),
+  getUnread: () => api.get('/notifications/unread'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+};
+
+// Newsletter API
+export const newsletterAPI = {
+  subscribe: (email, name) => api.post('/newsletter/subscribe', { email, name }),
 };
 
 export default api;

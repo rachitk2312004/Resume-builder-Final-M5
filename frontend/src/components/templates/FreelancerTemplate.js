@@ -31,7 +31,8 @@ const FreelancerTemplate = ({ data, isPreview = false }) => {
     projects = [],
     skills = [],
     education = [],
-    certifications = []
+    certifications = [],
+    customSections = []
   } = data || {};
 
   const containerClass = isPreview ? 'max-w-6xl mx-auto' : 'min-h-screen';
@@ -229,6 +230,33 @@ const FreelancerTemplate = ({ data, isPreview = false }) => {
                 </div>
               </div>
             </section>
+
+            {/* Custom Sections */}
+            {customSections && customSections.length > 0 && customSections.map((section) => (
+              section.items && section.items.length > 0 && (
+                <section key={section.id} className="lg:col-span-2">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <Briefcase className="w-6 h-6 text-orange-600" />
+                    {section.title}
+                  </h2>
+                  <div className="space-y-6">
+                    {section.items.map((item, index) => (
+                      <div key={index} className="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+                          {item.date && (
+                            <p className="text-gray-600 text-sm">{item.date}</p>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="text-gray-700">{item.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )
+            ))}
           </div>
         </div>
       </div>

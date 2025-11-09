@@ -27,7 +27,8 @@ const MinimalTemplate = ({ data, isPreview = false }) => {
     projects = [],
     skills = [],
     education = [],
-    certifications = []
+    certifications = [],
+    customSections = []
   } = data || {};
 
   const containerClass = isPreview ? 'max-w-4xl mx-auto' : 'min-h-screen';
@@ -205,6 +206,32 @@ const MinimalTemplate = ({ data, isPreview = false }) => {
               </div>
             </section>
           )}
+
+          {/* Custom Sections */}
+          {customSections && customSections.length > 0 && customSections.map((section) => (
+            section.items && section.items.length > 0 && (
+              <section key={section.id}>
+                <h2 className="text-2xl font-light text-gray-900 mb-8 border-b border-gray-200 pb-2">
+                  {section.title}
+                </h2>
+                <div className="space-y-8">
+                  {section.items.map((item, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <h3 className="text-xl font-medium text-gray-900">{item.title}</h3>
+                        {item.date && (
+                          <span className="text-gray-500 text-sm">{item.date}</span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className="text-gray-700">{item.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )
+          ))}
         </div>
       </div>
 

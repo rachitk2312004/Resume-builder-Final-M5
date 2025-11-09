@@ -7,18 +7,31 @@ export default function AIBar({ resumeData, onApplyAI }) {
   const [loading, setLoading] = useState(false);
 
   const callAI = async (type) => {
+    if (!resumeData) {
+      toast.error('Please add some resume content first');
+      return;
+    }
+    
     try {
       setLoading(true);
-      const payload = { prompt: JSON.stringify(resumeData).slice(0, 6000) };
+      const payload = { 
+        resumeText: JSON.stringify(resumeData || {}).slice(0, 6000),
+        jobDescription: '',
+        existingSummary: ''
+      };
       let res;
       if (type === 'summary') res = await aiAPI.summary(payload);
       if (type === 'skills') res = await aiAPI.skills(payload);
       if (type === 'ats') res = await aiAPI.atsOptimize(payload);
-      onApplyAI(type, res.data);
-      toast.success('AI suggestion ready');
+      
+      if (res && res.data && onApplyAI) {
+        onApplyAI(type, res.data);
+        toast.success('AI suggestion ready');
+      }
     } catch (e) {
       console.error(e);
-      toast.error('AI request failed');
+      const errorMsg = e.response?.data?.error || e.message || 'AI request failed';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }

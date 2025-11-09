@@ -31,20 +31,56 @@ const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('resumes');
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Only fetch if user is authenticated
+    if (user) {
+      fetchData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   const fetchData = async () => {
     try {
-      const [resumesResponse, portfoliosResponse] = await Promise.all([
-        resumeAPI.getResumes(),
-        portfolioAPI.getPortfolios()
-      ]);
+      setIsLoading(true);
       
-      setResumes(resumesResponse.data);
-      setPortfolios(portfoliosResponse.data);
+      // Fetch resumes and portfolios separately to allow partial success
+      try {
+        const resumesResponse = await resumeAPI.getResumes();
+        // Handle both array and object responses
+        if (Array.isArray(resumesResponse.data)) {
+          setResumes(resumesResponse.data);
+        } else if (resumesResponse.data && Array.isArray(resumesResponse.data.resumes)) {
+          setResumes(resumesResponse.data.resumes);
+        } else {
+          setResumes([]);
+          console.warn('Unexpected resumes response format:', resumesResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching resumes:', error);
+        const errorMsg = error.response?.data?.error || error.message || 'Failed to load resumes';
+        toast.error(`Failed to load resumes: ${errorMsg}`);
+        setResumes([]);
+      }
+      
+      try {
+        const portfoliosResponse = await portfolioAPI.getPortfolios();
+        // Handle both array and object responses
+        if (Array.isArray(portfoliosResponse.data)) {
+          setPortfolios(portfoliosResponse.data);
+        } else if (portfoliosResponse.data && Array.isArray(portfoliosResponse.data.portfolios)) {
+          setPortfolios(portfoliosResponse.data.portfolios);
+        } else {
+          setPortfolios([]);
+          console.warn('Unexpected portfolios response format:', portfoliosResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching portfolios:', error);
+        const errorMsg = error.response?.data?.error || error.message || 'Failed to load portfolios';
+        toast.error(`Failed to load portfolios: ${errorMsg}`);
+        setPortfolios([]);
+      }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Unexpected error fetching data:', error);
       toast.error('Failed to load data');
     } finally {
       setIsLoading(false);
@@ -288,7 +324,7 @@ const DashboardPage = () => {
                   </h3>
                   
                   <p className="text-sm text-gray-600 mb-4">
-                    Updated {new Date(resume.updatedAt).toLocaleDateString()}
+                    Updated {resume.updatedAt ? new Date(resume.updatedAt).toLocaleDateString() : 'Recently'}
                   </p>
                   
                   <div className="flex items-center justify-between">
@@ -372,7 +408,7 @@ const DashboardPage = () => {
                   </h3>
                   
                   <p className="text-sm text-gray-600 mb-4">
-                    Updated {new Date(portfolio.updatedAt).toLocaleDateString()}
+                    Updated {portfolio.updatedAt ? new Date(portfolio.updatedAt).toLocaleDateString() : 'Recently'}
                   </p>
                   
                   <div className="flex items-center justify-between">

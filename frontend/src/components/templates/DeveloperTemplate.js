@@ -28,7 +28,8 @@ const DeveloperTemplate = ({ data, isPreview = false }) => {
     projects = [],
     skills = [],
     education = [],
-    certifications = []
+    certifications = [],
+    customSections = []
   } = data || {};
 
   const containerClass = isPreview ? 'max-w-6xl mx-auto' : 'min-h-screen';
@@ -243,6 +244,36 @@ const DeveloperTemplate = ({ data, isPreview = false }) => {
                 </div>
               </div>
             )}
+
+            {/* Custom Sections */}
+            {customSections && customSections.length > 0 && customSections.map((section) => (
+              section.items && section.items.length > 0 && (
+                <div key={section.id} className="bg-gray-800 rounded-lg p-6 border border-green-500">
+                  <h2 className="text-xl font-bold text-green-400 mb-6 flex items-center gap-2">
+                    <Briefcase className="w-5 h-5" />
+                    $ {section.title.toLowerCase()}
+                  </h2>
+                  <div className="space-y-6">
+                    {section.items.map((item, index) => (
+                      <div key={index} className="border-l-2 border-green-500 pl-6">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-gray-300">{item.title}</h3>
+                          {item.date && (
+                            <div className="flex items-center gap-2 text-gray-400">
+                              <Calendar className="w-4 h-4" />
+                              <span className="text-sm">{item.date}</span>
+                            </div>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="text-gray-400">{item.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            ))}
           </div>
         </div>
       </div>

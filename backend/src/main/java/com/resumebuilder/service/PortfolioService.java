@@ -56,7 +56,14 @@ public class PortfolioService {
     }
     
     public List<Portfolio> getUserPortfolios(User user) {
-        return portfolioRepository.findByUserOrderByUpdatedAtDesc(user);
+        try {
+            return portfolioRepository.findByUserOrderByUpdatedAtDesc(user);
+        } catch (Exception e) {
+            System.err.println("Error fetching portfolios for user " + user.getId() + ": " + e.getMessage());
+            e.printStackTrace();
+            // Return empty list instead of throwing to prevent dashboard failure
+            return new java.util.ArrayList<>();
+        }
     }
     
     public Optional<Portfolio> getPortfolioById(Long id, User user) {
@@ -94,32 +101,81 @@ public class PortfolioService {
                 .orElseThrow(() -> new RuntimeException("Portfolio not found"));
         
         if (updates.containsKey("title")) {
-            portfolio.setTitle((String) updates.get("title"));
+            String title = (String) updates.get("title");
+            if (title != null && !title.trim().isEmpty()) {
+                portfolio.setTitle(title);
+            }
         }
         if (updates.containsKey("jsonContent")) {
-            portfolio.setJsonContent((String) updates.get("jsonContent"));
+            Object jsonContentObj = updates.get("jsonContent");
+            String jsonContent = jsonContentObj != null ? jsonContentObj.toString() : null;
+            portfolio.setJsonContent(jsonContent);
         }
         if (updates.containsKey("templateId")) {
-            portfolio.setTemplateId((String) updates.get("templateId"));
+            Object templateIdObj = updates.get("templateId");
+            String templateId = null;
+            if (templateIdObj != null) {
+                templateId = templateIdObj.toString();
+            }
+            if (templateId != null && !templateId.trim().isEmpty()) {
+                portfolio.setTemplateId(templateId);
+            } else {
+                portfolio.setTemplateId("modern"); // Default fallback
+            }
         }
         if (updates.containsKey("status")) {
             String statusStr = updates.get("status").toString();
-            portfolio.setStatus(Portfolio.Status.valueOf(statusStr));
+            try {
+                portfolio.setStatus(Portfolio.Status.valueOf(statusStr));
+            } catch (IllegalArgumentException e) {
+                // Invalid status, keep current status or default to IN_PROGRESS
+                System.err.println("Invalid status value: " + statusStr + ", keeping current status");
+            }
         }
         if (updates.containsKey("isPublic")) {
-            Boolean isPublic = (Boolean) updates.get("isPublic");
+            Object isPublicObj = updates.get("isPublic");
+            Boolean isPublic;
+            if (isPublicObj instanceof Boolean) {
+                isPublic = (Boolean) isPublicObj;
+            } else if (isPublicObj instanceof String) {
+                isPublic = Boolean.parseBoolean((String) isPublicObj);
+            } else {
+                isPublic = isPublicObj != null && !isPublicObj.toString().equalsIgnoreCase("false");
+            }
             portfolio.setIsPublic(isPublic);
-            if (isPublic && portfolio.getPublicLink() == null) {
+            if (isPublic != null && isPublic && portfolio.getPublicLink() == null) {
                 portfolio.setPublicLink(UUID.randomUUID().toString());
-            } else if (!isPublic) {
+            } else if (isPublic != null && !isPublic) {
                 portfolio.setPublicLink(null);
             }
         }
         if (updates.containsKey("slug")) {
             String slug = (String) updates.get("slug");
             if (slug != null && !slug.trim().isEmpty()) {
+                // Ensure slug is unique
+                if (portfolioRepository.existsBySlugAndIdNot(slug, id)) {
+                    // Slug already exists, append id to make it unique
+                    slug = slug + "-" + id;
+                }
                 portfolio.setSlug(slug);
             }
+        }
+        
+        // Ensure required fields are set
+        if (portfolio.getTitle() == null || portfolio.getTitle().trim().isEmpty()) {
+            portfolio.setTitle("New Portfolio");
+        }
+        if (portfolio.getTemplateId() == null || portfolio.getTemplateId().trim().isEmpty()) {
+            portfolio.setTemplateId("modern");
+        }
+        if (portfolio.getStatus() == null) {
+            portfolio.setStatus(Portfolio.Status.IN_PROGRESS);
+        }
+        if (portfolio.getIsPublic() == null) {
+            portfolio.setIsPublic(false);
+        }
+        if (portfolio.getViewsCount() == null) {
+            portfolio.setViewsCount(0L);
         }
         if (updates.containsKey("seoTitle")) {
             portfolio.setSeoTitle((String) updates.get("seoTitle"));
@@ -131,7 +187,15 @@ public class PortfolioService {
             portfolio.setSeoImageUrl((String) updates.get("seoImageUrl"));
         }
         
-        return portfolioRepository.save(portfolio);
+        // Save with error handling
+        try {
+            return portfolioRepository.save(portfolio);
+        } catch (Exception e) {
+            System.err.println("Error saving portfolio: " + e.getMessage());
+            e.printStackTrace();
+            // Re-throw with more context
+            throw new RuntimeException("Failed to save portfolio: " + e.getMessage(), e);
+        }
     }
     
     public Portfolio duplicatePortfolio(Long id, User user) {

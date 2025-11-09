@@ -12,7 +12,7 @@ import AIBar from '../components/AIBar';
 import JobUpload from '../components/JobUpload';
 import AIFeaturesPanel from '../components/AIFeaturesPanel';
 import { templates, getDefaultData } from '../components/templates/TemplateRegistry';
-import { exportAPI } from '../services/api';
+import { exportAPIEnhanced } from '../services/api';
 import { saveAs } from 'file-saver';
 import Modal from '../components/Modal';
 
@@ -33,6 +33,7 @@ const ResumeBuilderPage = () => {
   const [previewHtml, setPreviewHtml] = useState('');
   const [versions, setVersions] = useState([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const ensurePersonalInformation = (data) => {
     const sections = Array.isArray(data.sections) ? data.sections.slice() : [];
@@ -82,15 +83,26 @@ const ResumeBuilderPage = () => {
 
   // Auto-save functionality
   useEffect(() => {
-    if (id) {
+    if (id && formData.data && formData.data.sections && formData.data.sections.length > 0) {
       const timeoutId = setTimeout(() => {
-        const payload = {
-          title: formData.title,
-          jsonContent: JSON.stringify(formData.data),
-          status: formData.status,
-          isPublic: formData.isPublic,
-        };
-        saveResume(id, payload);
+        try {
+          // Validate that we have valid data before saving
+          const jsonContent = JSON.stringify(formData.data);
+          if (!jsonContent || jsonContent === '{}' || jsonContent === '{"sections":[]}') {
+            return; // Don't save empty data
+          }
+
+          const payload = {
+            title: formData.title || 'New Resume',
+            templateId: formData.templateId || 1,
+            jsonContent: jsonContent,
+            status: formData.status || 'IN_PROGRESS',
+            isPublic: formData.isPublic || false,
+          };
+          saveResume(id, payload);
+        } catch (error) {
+          console.error('Error preparing autosave payload:', error);
+        }
       }, 2000); // Auto-save after 2 seconds of inactivity
 
       return () => clearTimeout(timeoutId);
@@ -153,15 +165,63 @@ const ResumeBuilderPage = () => {
   };
 
   const handleDownload = async () => {
-    if (!id) { toast.error('Save resume first'); return; }
+    if (!id) { 
+      toast.error('Save resume first'); 
+      return; 
+    }
+    
+    // Generate HTML from current form data
+    let htmlToExport = previewHtml;
+    if (!htmlToExport || htmlToExport.trim() === '') {
+      // Generate HTML on-demand if preview is empty
+      htmlToExport = templates[formData.templateId]?.render(formData.data) || '';
+    }
+    
+    if (!htmlToExport || htmlToExport.trim() === '') {
+      toast.error('No content to export. Please add some content to your resume first.');
+      return;
+    }
+    
     try {
-      const pdfRes = await exportAPI.pdf(id, previewHtml);
-      saveAs(new Blob([pdfRes.data], { type: 'application/pdf' }), `resume-${id}.pdf`);
-      const docxRes = await exportAPI.docx(id, previewHtml);
-      saveAs(new Blob([docxRes.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), `resume-${id}.docx`);
+      setIsExporting(true);
+      const pdfRes = await exportAPIEnhanced.pdf(id, htmlToExport);
+      
+      // Check response status
+      if (pdfRes.status >= 200 && pdfRes.status < 300) {
+        // Success - create and download the PDF
+        const blob = pdfRes.data instanceof Blob 
+          ? pdfRes.data 
+          : new Blob([pdfRes.data], { type: 'application/pdf' });
+        saveAs(blob, `resume-${id}.pdf`);
+        toast.success('PDF exported successfully');
+      } else {
+        toast.error('Export failed: Invalid response from server');
+      }
     } catch (e) {
-      console.error(e);
-      toast.error('Export failed');
+      console.error('Export error:', e);
+      let errorMsg = 'Export failed';
+      
+      // Handle error response - the interceptor should have converted blob errors to JSON
+      if (e.response) {
+        if (e.response.data?.error) {
+          errorMsg = e.response.data.error;
+        } else if (typeof e.response.data === 'string') {
+          try {
+            const errorData = JSON.parse(e.response.data);
+            errorMsg = errorData.error || errorMsg;
+          } catch (parseError) {
+            errorMsg = e.response.data || errorMsg;
+          }
+        } else {
+          errorMsg = `HTTP ${e.response.status}: ${e.response.statusText || 'Export failed'}`;
+        }
+      } else if (e.message) {
+        errorMsg = e.message;
+      }
+      
+      toast.error(errorMsg);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -225,10 +285,11 @@ const ResumeBuilderPage = () => {
             </button>
             <button
               onClick={handleDownload}
-              className="btn-secondary"
+              disabled={isExporting}
+              className="btn-secondary disabled:opacity-50"
             >
               <Download className="w-4 h-4 mr-2" />
-              Download
+              {isExporting ? 'Exporting...' : 'Download'}
             </button>
             <button
               onClick={handleShare}

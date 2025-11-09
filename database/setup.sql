@@ -167,6 +167,98 @@ CREATE TABLE IF NOT EXISTS job_analysis_cache (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Module 5: Export, Admin, Monetization & Operations Tables
+
+-- Exports log table
+CREATE TABLE IF NOT EXISTS exports_log (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    resume_id BIGINT REFERENCES resumes(id) ON DELETE SET NULL,
+    portfolio_id BIGINT REFERENCES portfolios(id) ON DELETE SET NULL,
+    export_type VARCHAR(20) NOT NULL, -- PDF, DOCX, TEXT, SHARE
+    file_path VARCHAR(500),
+    file_size BIGINT,
+    email_sent BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    link VARCHAR(500),
+    read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Billing history table
+CREATE TABLE IF NOT EXISTS billing_history (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stripe_payment_intent_id VARCHAR(255) UNIQUE,
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    status VARCHAR(50) NOT NULL, -- pending, completed, failed, refunded
+    plan_type VARCHAR(50), -- free, pro, enterprise
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Admin logs table
+CREATE TABLE IF NOT EXISTS admin_logs (
+    id BIGSERIAL PRIMARY KEY,
+    admin_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action VARCHAR(100) NOT NULL,
+    target_type VARCHAR(50), -- user, template, portfolio, etc.
+    target_id BIGINT,
+    details TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Newsletter subscribers table
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+    id BIGSERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(100),
+    subscribed BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User activity logs table
+CREATE TABLE IF NOT EXISTS user_activity_logs (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    activity_type VARCHAR(50) NOT NULL, -- login, resume_edit, export, etc.
+    details TEXT,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add role column to users table if not exists
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='role') THEN
+        ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='subscription_tier') THEN
+        ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) DEFAULT 'free';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ai_credits') THEN
+        ALTER TABLE users ADD COLUMN ai_credits INTEGER DEFAULT 20;
+    END IF;
+END $$;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_exports_log_user_id ON exports_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+CREATE INDEX IF NOT EXISTS idx_billing_history_user_id ON billing_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_admin_user_id ON admin_logs(admin_user_id);
+CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user_id ON user_activity_logs(user_id);
+
 -- Grant permissions (adjust as needed for your setup)
 -- GRANT ALL PRIVILEGES ON DATABASE resume_builder TO your_app_user;
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO your_app_user;

@@ -28,7 +28,8 @@ const CreativeTemplate = ({ data, isPreview = false }) => {
     projects = [],
     skills = [],
     education = [],
-    certifications = []
+    certifications = [],
+    customSections = []
   } = data || {};
 
   const containerClass = isPreview ? 'max-w-6xl mx-auto' : 'min-h-screen';
@@ -219,6 +220,38 @@ const CreativeTemplate = ({ data, isPreview = false }) => {
                 </div>
               </div>
             )}
+
+            {/* Custom Sections */}
+            {customSections && customSections.length > 0 && customSections.map((section) => (
+              section.items && section.items.length > 0 && (
+                <div key={section.id} className="bg-white rounded-2xl p-8 shadow-xl">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-8 flex items-center gap-3">
+                    <Briefcase className="w-6 h-6 text-purple-600" />
+                    {section.title}
+                  </h2>
+                  <div className="space-y-8">
+                    {section.items.map((item, index) => (
+                      <div key={index} className="relative pl-8">
+                        <div className="absolute left-0 top-0 w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                        <div className="absolute left-2 top-6 bottom-0 w-0.5 bg-gradient-to-b from-purple-300 to-transparent"></div>
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
+                          <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
+                          {item.date && (
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Calendar className="w-4 h-4" />
+                              <span>{item.date}</span>
+                            </div>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="text-gray-700">{item.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            ))}
           </div>
         </div>
       </div>

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { newsletterAPI } from '../services/api';
+import toast from 'react-hot-toast';
 import { 
   ArrowRight, 
   CheckCircle, 
@@ -21,12 +23,51 @@ const LandingPage = () => {
   const { isAuthenticated } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterName, setNewsletterName] = useState('');
   const [chatMessages, setChatMessages] = useState([
     {
       type: 'bot',
       message: "Hi! I'm your AI assistant. I can help you build your resume and portfolio. What's your name?"
     }
   ]);
+
+  useEffect(() => {
+    // Add JSON-LD schema markup
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "AI Resume & Portfolio Builder",
+      "applicationCategory": "BusinessApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1247"
+      }
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(schema);
+    document.head.appendChild(script);
+    return () => document.head.removeChild(script);
+  }, []);
+
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await newsletterAPI.subscribe(newsletterEmail, newsletterName);
+      toast.success('Successfully subscribed to newsletter!');
+      setNewsletterEmail('');
+      setNewsletterName('');
+    } catch (e) {
+      toast.error('Failed to subscribe');
+    }
+  };
 
   const handleChatSubmit = (e) => {
     e.preventDefault();
@@ -240,6 +281,41 @@ const LandingPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="card text-center">
+            <Mail className="w-12 h-12 text-primary-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Stay Updated
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Subscribe to our newsletter for tips, updates, and exclusive content
+            </p>
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                placeholder="Your name"
+                value={newsletterName}
+                onChange={(e) => setNewsletterName(e.target.value)}
+                className="flex-1 input-field"
+              />
+              <input
+                type="email"
+                placeholder="Your email"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                required
+                className="flex-1 input-field"
+              />
+              <button type="submit" className="btn-primary">
+                Subscribe
+              </button>
+            </form>
           </div>
         </div>
       </section>

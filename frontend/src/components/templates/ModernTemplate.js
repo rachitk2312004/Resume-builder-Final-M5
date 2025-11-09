@@ -27,7 +27,8 @@ const ModernTemplate = ({ data, isPreview = false }) => {
     projects = [],
     skills = [],
     education = [],
-    certifications = []
+    certifications = [],
+    customSections = []
   } = data || {};
 
   const containerClass = isPreview ? 'max-w-4xl mx-auto' : 'min-h-screen';
@@ -225,6 +226,36 @@ const ModernTemplate = ({ data, isPreview = false }) => {
                 </div>
               </div>
             )}
+
+            {/* Custom Sections */}
+            {customSections && customSections.length > 0 && customSections.map((section) => (
+              section.items && section.items.length > 0 && (
+                <div key={section.id} className="bg-white rounded-xl p-6 shadow-lg">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <Briefcase className="w-6 h-6 text-blue-600" />
+                    {section.title}
+                  </h2>
+                  <div className="space-y-6">
+                    {section.items.map((item, index) => (
+                      <div key={index} className="border-l-4 border-blue-500 pl-6">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+                          <h3 className="text-xl font-semibold text-gray-800">{item.title}</h3>
+                          {item.date && (
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Calendar className="w-4 h-4" />
+                              <span>{item.date}</span>
+                            </div>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="text-gray-600">{item.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            ))}
           </div>
         </div>
       </div>

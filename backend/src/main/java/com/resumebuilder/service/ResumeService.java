@@ -40,7 +40,7 @@ public class ResumeService {
         Resume resume = resumeRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new RuntimeException("Resume not found"));
         
-        if (title != null) {
+        if (title != null && !title.trim().isEmpty()) {
             resume.setTitle(title);
         }
         if (jsonContent != null) {

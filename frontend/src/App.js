@@ -11,6 +11,8 @@ import ResumeBuilderPage from './pages/ResumeBuilderPage';
 import PortfolioBuilderPage from './pages/PortfolioBuilderPage';
 import SettingsPage from './pages/SettingsPage';
 import LogsViewerPage from './pages/LogsViewerPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import BillingPage from './pages/BillingPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicResumePage from './pages/PublicResumePage';
 import PublicPortfolioPage from './pages/PublicPortfolioPage';
@@ -89,6 +91,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <LogsViewerPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboardPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/billing" 
+                element={
+                  <ProtectedRoute>
+                    <BillingPage />
                   </ProtectedRoute>
                 } 
               />

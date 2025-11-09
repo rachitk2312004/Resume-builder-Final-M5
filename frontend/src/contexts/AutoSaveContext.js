@@ -22,11 +22,21 @@ export const AutoSaveProvider = ({ children }) => {
 
     setIsSaving(true);
     try {
+      // Validate data before sending
+      if (!data || !data.jsonContent) {
+        console.warn('Autosave skipped: missing data');
+        return;
+      }
+
       await resumeAPI.updateResume(id, data);
       setLastSaved(new Date());
     } catch (error) {
       console.error('Auto-save failed:', error);
-      toast.error('Auto-save failed');
+      const errorMsg = error.response?.data?.error || error.message || 'Auto-save failed';
+      // Only show error toast if it's a real error (not validation)
+      if (error.response?.status !== 400) {
+        toast.error(`Auto-save failed: ${errorMsg}`, { duration: 3000 });
+      }
     } finally {
       setIsSaving(false);
     }
@@ -37,11 +47,21 @@ export const AutoSaveProvider = ({ children }) => {
 
     setIsSaving(true);
     try {
+      // Validate data before sending
+      if (!data || !data.jsonContent) {
+        console.warn('Autosave skipped: missing data');
+        return;
+      }
+
       await portfolioAPI.updatePortfolio(id, data);
       setLastSaved(new Date());
     } catch (error) {
       console.error('Auto-save failed:', error);
-      toast.error('Auto-save failed');
+      const errorMsg = error.response?.data?.error || error.message || 'Auto-save failed';
+      // Only show error toast if it's a real error (not validation)
+      if (error.response?.status !== 400) {
+        toast.error(`Auto-save failed: ${errorMsg}`, { duration: 3000 });
+      }
     } finally {
       setIsSaving(false);
     }

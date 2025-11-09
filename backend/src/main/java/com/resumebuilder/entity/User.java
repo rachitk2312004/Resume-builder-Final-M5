@@ -39,6 +39,15 @@ public class User {
 
     @Column(name = "allow_external_ai")
     private Boolean allowExternalAi = true;
+
+    @Column(name = "role", length = 20)
+    private String role = "user";
+
+    @Column(name = "subscription_tier", length = 20)
+    private String subscriptionTier = "free";
+
+    @Column(name = "ai_credits")
+    private Integer aiCredits = 20;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -143,4 +152,11 @@ public class User {
     public void setPortfolios(List<Portfolio> portfolios) {
         this.portfolios = portfolios;
     }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+    public String getSubscriptionTier() { return subscriptionTier; }
+    public void setSubscriptionTier(String subscriptionTier) { this.subscriptionTier = subscriptionTier; }
+    public Integer getAiCredits() { return aiCredits; }
+    public void setAiCredits(Integer aiCredits) { this.aiCredits = aiCredits; }
 }

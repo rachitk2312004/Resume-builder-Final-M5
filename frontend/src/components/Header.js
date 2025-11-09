@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Menu, X, User, Settings, LogOut, FileText, Briefcase } from 'lucide-react';
+import { Menu, X, User, Settings, LogOut, FileText, Briefcase, Shield } from 'lucide-react';
+import NotificationsDropdown from './NotificationsDropdown';
 
 const Header = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -56,6 +57,12 @@ const Header = () => {
           {/* User Menu */}
           {isAuthenticated && (
             <div className="hidden md:flex items-center space-x-4">
+              <NotificationsDropdown />
+              {user?.role === 'admin' && (
+                <Link to="/admin" className="text-gray-700 hover:text-primary-600 transition-colors">
+                  <Shield className="w-5 h-5" />
+                </Link>
+              )}
               <div className="relative">
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
