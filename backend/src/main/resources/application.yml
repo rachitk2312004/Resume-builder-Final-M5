@@ -4,9 +4,9 @@ spring:
 
     
   datasource:
-    url: jdbc:postgresql://dpg-d3vg3f3ipnbc739khcc0-a.oregon-postgres.render.com:5432/resume_portfolio_builder_px72
-    username: resume_portfolio_builder_px72_user
-    password: nJv6cUpNDm1hnpPw2lcCKFXwXMxmT0ZR
+    url: "url"
+    username: "name"
+    password: "pass"
     driver-class-name: org.postgresql.Driver
   
   jpa:
